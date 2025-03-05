@@ -47,10 +47,15 @@ The function returns a list with the following elements:
         - Define the specific design matrix excluding any term including the regressed term and those excluded from the scr procedure (if scr=TRUE)
         - Fits a multivariate penalized regression model grouping by scores to determine the coefficient strengths.
         - Store the coefficient of the model in Delta_scores
-5.	Constructs Output Matrices:
+5.	Constructs Output Matrices (ONGOING):
     - Assembles estimated adjacency nonsimmetric matrix for the score checking if the value of each regression coefficent is > eps.
     - Define the covariates link symmetric adjacency on the scores using either the AND or the OR condition (Dic_delta_scores).
     - Define the covariates link symmetric adjacency on the functions connecting two function is at least two of their scores are connected in  Dic_delta_scores (Dic_delta_function).
+
+## Function name: CV_hyperparam (TO DO)
+#### Purpose
+This function this function define the best parameters in the sparse group lasso regression exploiting cross validation.
+
 
 
 
