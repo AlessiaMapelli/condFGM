@@ -173,4 +173,10 @@ G.mat <- FGGReg_diff_two_groups_SCV(scores, # functional score on a defined basi
                                        eps = 1e-08)
 
 stopCluster(cl)
+diag(G.true) <- 0
+G.true
+G.mat.try <-  ifelse(G.mat[,1:p], 1, 0)
+G.mat.try 
+
+prec.rec(G.true, G.mat.try, type="AND")
 
