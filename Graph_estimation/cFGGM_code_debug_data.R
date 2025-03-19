@@ -158,3 +158,19 @@ stopCluster(cl)
 
 
 
+numCores <- detectCores() - 1  # Use all but one core
+cl <- makeCluster(numCores)
+registerDoParallel(cl)
+G.mat <- FGGReg_diff_two_groups_SCV(scores, # functional score on a defined basis, nrow: subjects; ncol: functions*n_basis.
+                                       n_basis = 5, #Number of bases considered 
+                                       covariates  = covariates, #Additional covariates to regress on
+                                       L = 10, # How many penalization term in the Lasso to try
+                                       K = 5,
+                                       thres.ctrl = c(0, 0.2, 0.4, 0.8, 1.2, 1.6, 2.0), # recognition threshold epsilon_n = thres.ctrl * lambda_n,
+                                       verbose = FALSE,
+                                       tol.abs =1e-4 ,
+                                       tol.rel = 1e-4,
+                                       eps = 1e-08)
+
+stopCluster(cl)
+
