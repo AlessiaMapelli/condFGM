@@ -414,8 +414,6 @@ FGGReg_diff_two_groups_SCV <- function(scores, # functional score on a defined b
   time.start.gX <- proc.time()
   len.t <- length(thres.ctrl)
   
-  # G.mat is the optimal adjacency matrix to save
-  G.mat <- matrix(NA, p, p)
   
   n <- nrow(scores)
   M <- n_basis
@@ -436,6 +434,9 @@ FGGReg_diff_two_groups_SCV <- function(scores, # functional score on a defined b
   if (n < (q+1)*Mp) {
     warning("The sample size is too small! Network estimate may be unreliable!")
   }
+
+  # G.mat is the optimal adjacency matrix to save
+  G.mat <- matrix(NA, p, (q+1)*p)
   
   ## DEFINITION OF THE DESIGN MATRIX
   
@@ -477,7 +478,7 @@ FGGReg_diff_two_groups_SCV <- function(scores, # functional score on a defined b
   Q.def <- matrix(0.1, 2*(p-1)*M, M)
   U.def <- matrix(0.01, 2*(p-1)*M, M)
   
-  G.mat <- foreach(j = 1:p, .combine="rbind", .packages="fda", .export=c('ADMM.grplasso.two.groups','lambda.sup',
+  results <- foreach(j = 1:p, .combine="rbind", .packages="fda", .export=c('ADMM.grplasso.two.groups','lambda.sup',
                                                                            'lambda.sup.global.two.groups', 'grp.soft.thres.two.groups',
                                                                            'objective.function.two.groups')) %dopar% {
     message("Processing node ", j)
@@ -589,16 +590,37 @@ FGGReg_diff_two_groups_SCV <- function(scores, # functional score on a defined b
     t.optimal <- thres.ctrl[ind.t.optimal]
 
     N.hat.optimal <- N.hat.j.dict[[l.optimal]][[ind.t.optimal]]
-    N.hat.optimal
+    list(N.hat.optimal = N.hat.optimal, N.hat.all = N.hat.j.dict)
   }
+  
+
+  for (j in 1:p) {
+    G.mat[j,] <- results[j,1][[1]]
+  }
+  G.all = list()
+    for(l in 1:L){
+      G.all[[l]] <- list()
+      for(ind.t in 1:len.t){
+        G.temp <- matrix(NA, p, (q+1)*p)
+        for (j in 1:p) {
+          G.temp[j,] <- results[j,2][[1]][[l]][[ind.t]]
+        }
+        G.all[[l]][[ind.t]] <-  G.temp
+      }
+      }
+
+
   time.end.gX <- proc.time()
   runtime.gX <- (time.end.gX - time.start.gX)[3]
   cat("Computational time of: ")
   cat(runtime.gX)
-  return(G.mat)
+  return(list(
+      G.mat = G.mat,
+      G.all = G.all
+    ))
 }
 
-############################# SAME AS THEIRS prec.rec
+############################# UPDATED prec.rec including F1 value
 prec.rec <- function(G.true, G.mat, type=c("AND","OR")){
   # a function to calculate TP, FP, TN, FN
   # and return precision, recall, TPR and FPR.
@@ -658,5 +680,8 @@ prec.rec <- function(G.true, G.mat, type=c("AND","OR")){
   
   TPR <- TP / (TP + FN)
   FPR <- FP / (FP + TN)
-  return(list(prec=prec, rec=rec, TPR=TPR, FPR=FPR))
+  F1 <- 2*TP/(2*TP+FP+FN)
+  return(list(prec=prec, rec=rec, TPR=TPR, FPR=FPR, F1=F1))
 }
+
+

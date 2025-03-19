@@ -118,9 +118,6 @@ for(j in 1:p){
 time.end.fpc <- proc.time()
 runtime.fpc <- (time.end.fpc - time.start.fpc)[3]
 
-lambda.max.gX <- lambda.sup.global.gX(fpc.score, p)
-lambdas.gX <- seq(lambda.max.gX, 0, length.out=L)
-
 ####################################
 #     PART 1: DATA PREPROCESSING  #
 ####################################
@@ -139,8 +136,6 @@ save(full_data,lambdas.gX, G.true, M, p, n, tau, thres.ctrl, tol.abs, tol.rel, L
 
 source(paste(my.func.path,"cFGGM_functions_two_groups.R", sep="/"))   # my fun
 
-library(doParallel)
-
 # Detect available cores and register them
 numCores <- detectCores() - 1  # Use all but one core
 cl <- makeCluster(numCores)
@@ -155,28 +150,65 @@ res_par <- FGGReg_diff_two_groups(scores, # functional score on a defined basis,
                                       tol.rel = 1e-4,
                                       eps = 1e-08)
 stopCluster(cl)
+res_par
 
-
+n_basis = 5
+L = 10
+K = 5
+thres.ctrl = c(0, 0.2, 0.4, 0.8, 1.2, 1.6, 2.0)
+p <- ceiling(ncol(scores)/n_basis)
 
 numCores <- detectCores() - 1  # Use all but one core
 cl <- makeCluster(numCores)
 registerDoParallel(cl)
-G.mat <- FGGReg_diff_two_groups_SCV(scores, # functional score on a defined basis, nrow: subjects; ncol: functions*n_basis.
-                                       n_basis = 5, #Number of bases considered 
+res <- FGGReg_diff_two_groups_SCV(scores, # functional score on a defined basis, nrow: subjects; ncol: functions*n_basis.
+                                       n_basis = n_basis, #Number of bases considered 
                                        covariates  = covariates, #Additional covariates to regress on
-                                       L = 10, # How many penalization term in the Lasso to try
-                                       K = 5,
-                                       thres.ctrl = c(0, 0.2, 0.4, 0.8, 1.2, 1.6, 2.0), # recognition threshold epsilon_n = thres.ctrl * lambda_n,
+                                       L = L, # How many penalization term in the Lasso to try
+                                       K = K,
+                                       thres.ctrl = thres.ctrl, # recognition threshold epsilon_n = thres.ctrl * lambda_n,
                                        verbose = FALSE,
                                        tol.abs =1e-4 ,
                                        tol.rel = 1e-4,
                                        eps = 1e-08)
 
 stopCluster(cl)
+
+G.mat <- res$G.mat
+G.all <- res$G.all
+
+
 diag(G.true) <- 0
 G.true
 G.mat.try <-  ifelse(G.mat[,1:p], 1, 0)
 G.mat.try 
 
 prec.rec(G.true, G.mat.try, type="AND")
+prec.rec(G.true, G.mat.try, type="OR")
+
+len.t <- length(thres.ctrl)
+prec.mat <- matrix(NA, L,len.t )
+recall.mat <- matrix(NA, L,len.t)
+
+library("MLmetrics")
+
+G.mat.opt.f1 <- matrix(NA,p,p)
+for(j in 1:p){
+  f1.mat <- matrix(NA, L,len.t)
+ for(l in 1:L){
+  for(ind.t in 1:len.t){
+    G.mat.try <- ifelse(G.all[[l]][[ind.t]][j,1:p], 1, 0)
+    conf <- table(G.true[j,],G.mat.try)
+    prec.mat[l,ind.t] <- prec.rec(G.true[j,], G.mat.try, type="AND")$prec
+    recall.mat[l,ind.t] <- prec.rec(G.true[j], G.mat.try, type="AND")$rec
+
+  }
+}
+  }
+
+
+
+
+  
+
 
