@@ -16,7 +16,7 @@ drop_indx = c(c(1:(T*9*2-1)), c((T*9*2+2):(T*10*2-1)), c((T*10*2+2):(T*11*2-1)),
 basis_obj_drop = create.fourier.basis(rangeval = c(0,T), nbasis = n_scores, dropind = drop_indx)
 # e_drop = eval.basis(time, basis_obj_drop )
 fd_basisdrop = fdPar(basis_obj_drop)
-
+i=1
 for(i in 0:(n_sub-1)){
   print( paste('i', i))
   prova <- npyLoad(file = paste('conditional_neurofgm/sim_data_50sub/fd_data_', as.character(i), '.npy', sep=''))
