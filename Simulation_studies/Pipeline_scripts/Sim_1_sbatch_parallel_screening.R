@@ -1,64 +1,61 @@
 rm(list=ls(all=TRUE))
+packages <- c('yaml')
+install.packages(setdiff(packages, rownames(installed.packages())), dependencies = TRUE)
+suppressPackageStartupMessages(library(yaml))
+
+#################################################
+## USER DEFINED PARAMETERS (MODIFY THE PATH TO THE CORRECT YAML FILE)
+#################################################
+args <- commandArgs(trailingOnly = TRUE)
+yaml_file_path = args[[1]]
+config <- yaml.load_file(yaml_file_path)
 time.start <- Sys.time()
 
 #################################################
 ## 0. USER DEFINED PARAMETERS (MODIFY THIS PART)
 #################################################
-score_path = "/group/diangelantonio/users/alessia_mapelli/Brain_simulations/Model A/A050S_2g_new_scores_3/fpc_score_75_unbalanced.csv"
-grouping_path = "/group/diangelantonio/users/alessia_mapelli/Brain_simulations/Model A/A050S_2g_new_scores_3/true_grouping_75_unbalanced.csv"
-distance_path ="/group/diangelantonio/users/alessia_mapelli/Brain_simulations/Model A/A050S_2g_new_scores_3/Node_corr_matrix_75_unbalanced.rda"
-output_path = "/group/diangelantonio/users/alessia_mapelli/Brain_simulations/Model A/A050S_2g_new_scores_3/results_of_screening_procedure/75_unbalanced/"
-name_output = "rand_hyper_search"
-n_basis = 3
-L = 100
-K = 5
-thres.ctrl = c(0, 0.2, 0.4, 0.8, 1.2, 1.6, 2.0)
-tol.abs =1e-4
-tol.rel = 1e-4
-eps = 1e-08
-verbose = FALSE
-p.rand.lam = 0.5
-p.rand.thr = 1
-pre_screen = FALSE
-pre_screen_threshold = NULL
+save_path = config$save_path
+simulation_name = config$simulation_name
+iteration = config$iteration
+score_path = paste0(save_path, simulation_name,"/", "seed_", iteration, "/", "fpc_scores.csv")
+grouping_path = paste0(save_path, simulation_name,"/", "seed_", iteration, "/", "grouping_factor.csv")
+distance_path = paste0(save_path, simulation_name,"/", "seed_", iteration, "/", "Node_corr_matrix.rda")
+output_path = paste0(save_path, simulation_name,"/", "seed_", iteration, "/", "results/")
+name_output = config$name_output
+n_basis = config$M
+L = config$L
+K = config$K
+thres.ctrl = unlist(config$thres_ctrl)
+tol.abs =config$tol_abs
+tol.rel = config$tol_rel
+eps = config$eps
+verbose = config$verbose
+p.rand.lam = config$p_rand_lam
+p.rand.thr = config$p_rand_thr
+pre_screen = config$pre_screen
+pre_screen_threshold = config$pre_screen_threshold
 ##############################################
 
 #################################################
 ## Include parameter info in the logs
-cat("Score source: ", score_path,"\n")
-cat("Grouping source: ", grouping_path,"\n")
-cat("Parameters: \n")
-cat("n_basis: ", n_basis ,"\n")
-cat("L: ", L ,"\n")
-cat("K : ", K  ,"\n")
-cat("thres.ctrl : ", thres.ctrl  ,"\n")
-cat("p.rand.lam:", p.rand.lam, "\n")
-cat("p.rand.thr:", p.rand.thr, "\n")
-if (pre_screen) {
-  cat("The pre-screening procedure is active based on: ", distance_path, "\n")
-  if(!(is.null(pre_screen_threshold))){cat("The pre-screening threshold applied is: ", pre_screen_threshold,"\n")}
-  }
-
+cat("Parameter source: ", yaml_file_path,"\n")
 #################################################
 
 
 #############################################
 ###### 1. Upload all the data needed
 #############################################
-args <- commandArgs(trailingOnly = TRUE)
-j = as.numeric(args[[1]])
+j = as.numeric(args[[2]])
 scores <- read.csv(score_path)[, -1]
 n_nodes <- ncol(scores)/n_basis
 n_samples <- nrow(scores)
-names <- rep(NA, ncol(scores))
-for(l in 1:ncol(scores)){
-  names[l] <- paste("f",ceiling(l/n_basis) ,".",l%%n_basis, sep ="")
-}
-colnames(scores) <- names
 covariates <- data.frame( group = as.factor(read.csv(grouping_path)[,-1]))
 full_data <- cbind(covariates,scores)
-screening_matrix <- get(load(distance_path))
-diag(screening_matrix) <- 0
+if(pre_screen){
+  screening_matrix <- get(load(distance_path))
+  diag(screening_matrix) <- 0
+}
+
 
 #############################################
 ###### 2.Define functions needed for the computation
@@ -523,5 +520,5 @@ cat("\n Computational time of: ")
 cat( Sys.time() - time.start )
 full_result_path = paste(output_path, name_output, "_", j, ".rda", sep ="")
 save(N.hat.optimal, file =full_result_path)
-cat("Output saved to: ", full_result_path,"\n" )
+cat("\n Output saved to: ", full_result_path,"\n" )
 
