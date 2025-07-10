@@ -503,7 +503,17 @@ for(k in 1:n_blocks){
       next} else {
         P.frob[[key]] <- norm(P[(k-1)*M + (1:M), ], "F")
       }
-  }
+}
+
+P.beta <- list()
+for(k in 1:n_blocks){
+  key <- unique(groups[(k-1)*M + (1:M)])
+  if(length(key) > 1){
+    message("Error in group definition for block ", k)
+    next} else {
+      P.beta[[key]] <- P[(k-1)*M + (1:M), ]
+    }
+}
   
 N.hat.optimal <- rep(FALSE, length(P.frob))
 for(n_block in 1:length(P.frob)){
@@ -521,4 +531,16 @@ cat( Sys.time() - time.start )
 full_result_path = paste(output_path, name_output, "_", j, ".rda", sep ="")
 save(N.hat.optimal, file =full_result_path)
 cat("\n Output saved to: ", full_result_path,"\n" )
+
+norm(P.beta[[2]], "F")
+norm(P.beta[[12]], "F")
+norm(P.beta[[2]]+ P.beta[[12]], "F")
+# Norms are reduces when the two are summed 
+
+
+norm(P.beta[[3]], "F")
+norm(P.beta[[13]], "F")
+norm(P.beta[[3]]+P.beta[[13]], "F")
+# Norms are reduces when the two are summed 
+
 

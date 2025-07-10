@@ -67,6 +67,14 @@ if(model_g1 == "A.prelim.func.R"){
   Theta.g1 <- cov.mat.model.A(p, mu) # p*mu by p*mu large square matrix
 }else if (model_g1== "A.prelim.func.red.R"){
   Theta.g1 <- cov.mat.model.A.red(p, mu, red.number) # p*mu by p*mu large square matrix
+}else if (model_g1== "A.prelim.func.diff.weights.R"){
+  Theta.g1 <- cov.mat.model.A.diff.weights(p, mu, red.number) # p*mu by p*mu large square matrix
+} else if (model_g1== "A.prelim.func.red.top.R"){
+  Theta.g1 <- cov.mat.model.A.red.top(p, mu, red.number)
+} else if(model_g1=="A.prelim.func.empty.R"){
+  Theta.g1 <- cov.mat.model.A.empty(p, mu)
+} else if(model_g1=="D.prelim.func.R"){
+  Theta.g1 <- cov.mat.model.D(p, mu, seed_g1)
 }
 
 
@@ -137,7 +145,16 @@ if(model_g2 == "A.prelim.func.R"){
   Theta.g2 <- cov.mat.model.A(p, mu) # p*mu by p*mu large square matrix
 } else if (model_g2== "A.prelim.func.red.R"){
   Theta.g2 <- cov.mat.model.A.red(p, mu, red.number ) # p*mu by p*mu large square matrix
+}else if (model_g2== "A.prelim.func.diff.weights.R"){
+  Theta.g2 <- cov.mat.model.A.diff.weights(p, mu, red.number) # p*mu by p*mu large square matrix
+}else if (model_g2== "A.prelim.func.red.top.R"){
+  Theta.g2 <- cov.mat.model.A.red.top(p, mu, red.number)
+} else if(model_g2=="A.prelim.func.empty.R"){
+  Theta.g2 <- cov.mat.model.A.empty(p, mu)
+} else if(model_g2=="D.prelim.func.R"){
+  Theta.g2 <- cov.mat.model.D(p, mu, seed_g2)
 }
+
 
 adj_df <- melt(Theta.g2)
 colnames(adj_df) <- c("Row", "Col", "Value")
@@ -265,3 +282,4 @@ print("END: Simulation of the data completed in: ")
 Sys.time()-time.start
 output_path = paste0(foldname, "results/")
 dir.create(output_path)
+

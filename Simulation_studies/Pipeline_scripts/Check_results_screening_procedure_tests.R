@@ -77,6 +77,7 @@ prec.rec <- function(G.true, G.mat, type=c("AND","OR")){
       }
     }
   }
+
   prec <- TP / (TP + FP)
   if(TP+FP==0) prec <- 0
   
@@ -86,6 +87,12 @@ prec.rec <- function(G.true, G.mat, type=c("AND","OR")){
   TPR <- TP / (TP + FN)
   FPR <- FP / (FP + TN)
   F1 <- 2*TP/(2*TP+FP+FN)
+
+  if(sum(G.mat) ==0 & sum(G.true)==0 ){
+    TPR <- 0
+    FPR <- 0
+    F1 <- 1
+  }
   return(list(prec=prec, rec=rec, TPR=TPR, FPR=FPR, F1=F1))
 }
 #################################################
@@ -104,7 +111,8 @@ for(iteration in 1:tot_iteration){
   }
   foldname = paste0(save_path, simulation_name,"/", "seed_", iteration)
   load(paste(foldname,"/Ground_truth_",name_output,".rda", sep=""))
-  G.pop <- (G.true.g2>0) & (G.true.g1>0)
+  #G.pop <- (G.true.g2>0) & (G.true.g1>0)
+  G.pop <- (G.true.g1>0)
   diag(G.pop) <- FALSE
   G.pop <-ifelse(G.pop, 1, 0)
   G.our.pop <- G.our[,1:num_nodes]
@@ -118,7 +126,7 @@ for(iteration in 1:tot_iteration){
   results_metices <- rbind(results_metices,c("POP","OR",res_or$prec,
                                              res_or$TPR, res_or$FPR, res_or$F1,
                                              n_g1, n_g2))
-  G.diff <- (abs(G.true.g2 - G.true.g1)>0)
+  G.diff <- (abs(G.true.g2 - G.true.g1))>0
   diag(G.diff) <- FALSE
   G.diff <-ifelse(G.diff, 1, 0)
   
@@ -135,6 +143,6 @@ for(iteration in 1:tot_iteration){
   
 }
 results_metices <- results_metices[-1,]
-write.csv(results_metices, paste(save_path, simulation_name, "/results_metices_",name_output, ".csv", sep=""))
-cat("Results saved to ", paste(save_path, simulation_name, "/results_metices_",name_output, ".csv", sep=""), "\n")
+write.csv(results_metices, paste(save_path, simulation_name, "/test_results_metices_",name_output, ".csv", sep=""))
+cat("Results saved to ", paste(save_path, simulation_name, "/test_results_metices_",name_output, ".csv", sep=""), "\n")
 #################################################

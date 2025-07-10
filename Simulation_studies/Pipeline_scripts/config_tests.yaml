@@ -1,7 +1,7 @@
 # === Simulation Setup ===
 func_path: /group/diangelantonio/users/alessia_mapelli/conditional_neurofgm/Simulation_studies/Pipeline_scripts/Functions
 save_path: /group/diangelantonio/users/alessia_mapelli/Brain_simulations/systematic_simulations/Model_A/
-simulation_name: p10_n200
+simulation_name: p10_n200_empty
 iteration: 10
 tot_iteration: 10
 seed_g1: 2025
@@ -13,9 +13,9 @@ n_g1: 200
 n_g2: 200
 mu: 15 # number of basis used to generate data
 tau: 100 # number of observations in the functional space [0,1]
-model_g1: "A.prelim.func.red.R"
-model_g2: "A.prelim.func.R"
-red_number: 4 # number of nodes to detach if you use model A red
+model_g1: "A.prelim.func.empty.R"
+model_g2: "A.prelim.func.red.top.R"
+red_number: 6 # number of nodes to detach if you use model A red
 
 # === Reconstruction & Dimensionality Reduction ===
 rec_basis_type: "fourier" # type of basis used to rencontrict the data
@@ -23,7 +23,7 @@ rec_basis_number: 15 # how many basis are used to reconstrct the data
 M: 5  # number of fPC to retain
 
 # === Input Paths ===
-name_output: "additive_diff"
+name_output: "complete_not_overlap"
 
 # === Model Parameters ===
 L: 100

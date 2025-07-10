@@ -3,7 +3,7 @@
 ####################################
 
 # 0.1. A function generating precision matrix of delta
-cov.mat.model.D <- function(p, M, deltas=seq(1,30,0.5)){
+cov.mat.model.D <- function(p, M, seed, deltas=seq(1,30,0.5)){
   # Input:
   #   p, number of covariates
   #   M, number of basis functions
@@ -12,6 +12,7 @@ cov.mat.model.D <- function(p, M, deltas=seq(1,30,0.5)){
   Theta.off.diag <- matrix(0, nrow=p*M, ncol=p*M)
   for(i in 1:p){
     for(j in 1:p){
+      set.seed(seed+j)
       if(i<j & runif(1)<0.1)
         Theta.off.diag[((i-1)*M+1):(i*M), ((j-1)*M+1):(j*M)] <- 0.5*diag(M)
       else
