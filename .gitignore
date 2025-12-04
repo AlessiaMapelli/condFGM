@@ -4,3 +4,6 @@
 .Ruserdata
 .npy
 .fif
+
+# macOS
+.DS_Store
