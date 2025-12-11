@@ -1,7 +1,6 @@
 #!/bin/bash
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=alessia.mapelli@fht.org
-#SBATCH --output=logs/%j_Node.log
 #SBATCH --partition=cpuq
 #SBATCH --mem=500MB
 #SBATCH --nodes=1
