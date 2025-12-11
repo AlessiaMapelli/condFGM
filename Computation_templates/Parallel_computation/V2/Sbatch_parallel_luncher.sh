@@ -1,6 +1,9 @@
 #!/bin/bash
 
 CONFIG_FILE="$1"
+
+CURRENT_FOLDER=$(pwd)
+
 R_SCRIPT="Script_sbatch_parallel.R"
 JOBS_LIMIT=70
 
@@ -21,7 +24,7 @@ for i in $(seq 1 "$NODES"); do
   echo "Processing: Node ${i}"
   INPUT=${i}
   LOG_FILE="${LOG_DIR}/Node_${i}.log"
-  RES=$(sbatch --parsable --output="$LOG_FILE" "Sbatch_parallel.sbatch" "$INPUT" "$R_SCRIPT" "$CONFIG_FILE")
+  RES=$(sbatch --parsable --output="$LOG_FILE" "Sbatch_parallel.sbatch" "$INPUT" "$R_SCRIPT" "$CONFIG_FILE" "$CURRENT_FOLDER")
   echo "Running job ID: $RES"
 done
 

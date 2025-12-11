@@ -1,0 +1,25 @@
+# === Input and Output Paths ===
+score_path: /group/diangelantonio/users/alessia_mapelli/conditional_neurofgm/Computation_templates/Parallel_computation/V2/scores_example.csv
+covariate_path: /group/diangelantonio/users/alessia_mapelli/conditional_neurofgm/Computation_templates/Parallel_computation/V2/grouping_factor_example.csv
+#Both need to be saved as csv files with row and columns names
+#If no covariates are included in the model set it to NULL
+
+n_nodes: 10
+n_basis_for_dim_recustion: 5
+
+output_path: /group/diangelantonio/users/alessia_mapelli/Brain_simulations/Test_computational_template/
+name_output: 2g
+
+# === Model Parameters ===
+L: 100
+K: 5
+thres_ctrl: [0, 0.2, 0.4, 0.8, 1.2, 1.6, 2.0]
+tol_abs: 0.0001
+tol_rel: 0.0001
+eps: 0.00000001
+verbose: TRUE
+p_rand_lam: 0.5
+p_rand_thr: 1
+
+# === Symmetrization Parameters ===
+type: OR

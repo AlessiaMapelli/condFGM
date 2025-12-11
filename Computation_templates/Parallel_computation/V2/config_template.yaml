@@ -21,3 +21,5 @@ verbose: TRUE
 p_rand_lam: 0.5
 p_rand_thr: 1
 
+# === Symmetrization Parameters ===
+type: AND #or OR
