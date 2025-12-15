@@ -1,0 +1,23 @@
+# === Input and Output Paths ===
+input_path: EEG_dataset/seed_1/Fudge_dataset.RData
+#RData file containing the score data to be analyzed saved as scores_df and the covraiates to be included in the model as covariates_df
+#Note: 
+# - the covariates_df need to be in a data.frame format with the correct type definition for each covariate (e.g. factor for categorical variables)
+# - the covariates_df can be exluded if no covariates are to be included in the model
+
+n_nodes: 64
+n_basis_for_dim_recustion: 5
+
+output_path: EEG_dataset/seed_1/results/
+name_output: Test1
+
+# === Model Parameters ===
+L: 100
+K: 5
+thres_ctrl: [0, 0.2, 0.4, 0.8, 1.2, 1.6, 2.0]
+verbose: TRUE
+p_rand_lam: 0.5
+p_rand_thr: 1
+
+# === Symmetrization Parameters ===
+type: OR # Options: OR, AND
