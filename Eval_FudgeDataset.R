@@ -141,6 +141,20 @@ adj_group = G.our.symm.weighted$group
 # adj_group[adj_group < thre] = 0
 adj_group = log(adj_group)
 adj_group[is.na(adj_group)] = 0
-adj_group[adj_group> -6 & adj_group < 1] = 0
-# adj_group[adj_group <0 & adj_group > -1  ] = 0
-plot_single_graph(adj_group, "Differential network")
+
+# remove diagonal if needed
+diag(adj_group) <- 0
+
+# vector of existing edges
+vals <- adj_group[adj_group != 0 & !is.na(adj_group)]
+lower_thr <- quantile(vals, probs = 0.05, na.rm = TRUE)
+upper_thr <- quantile(vals, probs = 0.95, na.rm = TRUE)
+adj_extreme <- adj_group
+
+adj_extreme[
+  adj_group > lower_thr & adj_group < upper_thr
+] <- 0
+
+
+plot_single_graph(adj_extreme, "Differential network")
+
