@@ -1,0 +1,20 @@
+# STEP 1
+cd Simulation_studies/Step1/
+bash Sbatch_simulations_luncher_tests.sh
+Rscript Process_logs_comp_time.R
+
+bash FuDGE/Sbatch_run_litt_comp_analysis.sh
+Rscript FuDGE/Process_logs_comp_time_litt_comp.R
+
+# STEP 2
+cd Simulation_studies/Step2/
+# For each config file
+CONFIG_FILE="config_S1.yaml"
+
+# For each iteration from 1:10 in the config file
+Rscript Data_simulator_tests.R "$CONFIG_FILE"
+bash Sbatch_parallel_luncher_tests.sh "$CONFIG_FILE"
+squeue -u $USER 
+
+# ONCE ALL THE SIMULATIONS ARE COMPLETED
+Rscript Check_results_screening_procedure_tests.R "$CONFIG_FILE"
