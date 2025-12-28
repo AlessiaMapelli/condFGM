@@ -142,8 +142,9 @@ for(i in 1:n_groups){
             G.cov.simm.warning[j,k] <- 1
             G.cov.simm.warning[k,j] <- 1
           }
-            G.cov.simm.weighted[j,k] <- mean(c(ratio.beta.forbs.jk, ratio.beta.forbs.kj))
-            G.cov.simm.weighted[k,j] <- mean(c(ratio.beta.forbs.jk, ratio.beta.forbs.kj))
+            x <- c(ratio.beta.forbs.jk, ratio.beta.forbs.kj)
+            G.cov.simm.weighted[j,k] <- exp(mean(log(x)))
+            G.cov.simm.weighted[k,j] <- exp(mean(log(x)))
         }
       }
     }
