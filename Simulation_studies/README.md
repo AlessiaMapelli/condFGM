@@ -53,7 +53,7 @@ bash Sbatch_simulations_luncher_test.sh
 ```
 This script automatically evaluates the pipeline performance across different combinations of `p` and `n` specified in the file at **lines 17-19** .
 
-#### 1.2 Process Computational Time (Main Algorithm)
+#### 1.2 Process Computational Time (Our Algorithm)
 ```bash
 Rscript Process_logs_comp_time.R
 ```
@@ -111,7 +111,8 @@ After completing all simulations:
 Rscript Plot_simulations_resulrs.R
 ```
 
-This script generates all figures presented in the manuscript.
+This script generates all figures presented in the manuscript. 
+The complete simulation results are available at https://osf.io/ta3bq/overview for reproducibility purposes.
 
 ## Scenario Configuration
 
