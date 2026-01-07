@@ -70,3 +70,5 @@ Rscript Results_evaluation.R config_file.yaml
 ## Output Files
 
 ###### 5. Plot final results
+Run Eval_FudgeDataset_topomap.R to visualize the differential network.
+
