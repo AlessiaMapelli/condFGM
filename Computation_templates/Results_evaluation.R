@@ -101,7 +101,7 @@ for(i in 1:n_groups){
       for(k in 1: num_nodes){
         if(G.cov[j,k]){
           load(paste(output_path, name_output,"_" ,j, "coeff.rda", sep=""))
-          beta.g2.forbs <- norm(P.values[[k]] + P.values[[k+num_nodes]], "F")
+          beta.g2.forbs <- norm(P.values[[k]] + P.values[[k+(num_nodes*(i-1))]], "F")
           if(P.frob[[k]] == 0){
             cat("Warning: Zero norm at denominator. Setting to the numerator value")
             G.cov.weighted[j,k] <- beta.g2.forbs
@@ -117,7 +117,7 @@ for(i in 1:n_groups){
       for (k in (j + 1):num_nodes) {
         if(G.cov.simm[j,k]){
           load(paste(output_path, name_output,"_" ,j, "coeff.rda", sep=""))
-          beta.g2.forbs.jk <- norm(P.values[[k]] + P.values[[k+num_nodes]], "F")
+          beta.g2.forbs.jk <- norm(P.values[[k]] + P.values[[k+(num_nodes*(i-1))]], "F")
           if(P.frob[[k]] == 0){
             cat("Warning: Zero norm at denominator. Setting to the numerator value")
             ratio.beta.forbs.jk <- beta.g2.forbs.jk
@@ -125,7 +125,7 @@ for(i in 1:n_groups){
             ratio.beta.forbs.jk <- beta.g2.forbs.jk/(P.frob[[k]])
           }
           load(paste(output_path, name_output,"_" ,k, "coeff.rda", sep=""))
-          beta.g2.forbs.kj <- norm(P.values[[j]] + P.values[[j+num_nodes]], "F")
+          beta.g2.forbs.kj <- norm(P.values[[j]] + P.values[[j+(num_nodes*(i-1))]], "F")
           if(P.frob[[j]] == 0){
             cat("Warning: Zero norm at denominator. Setting to the numerator value")
             ratio.beta.forbs.kj <- beta.g2.forbs.kj
