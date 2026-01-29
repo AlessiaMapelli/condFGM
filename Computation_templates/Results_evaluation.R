@@ -32,7 +32,7 @@ if ((exists("covariates_df", envir = .GlobalEnv) && is.data.frame(covariates_df)
 cov_names <- "population" }
 
 num_nodes = config$n_nodes
-n_comp <- config$n_basis_for_dim_recustion
+n_comp <- config$dim_red_basis_number
 
 ##############################################
 
