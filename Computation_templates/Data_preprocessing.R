@@ -1,6 +1,6 @@
 # Required packages
 rm(list=ls(all=TRUE))
-packages <- c('yaml')
+packages <- c('yaml', 'dplyr')
 install.packages(setdiff(packages, rownames(installed.packages())), dependencies = TRUE)
 suppressPackageStartupMessages(library(yaml))
 
@@ -40,7 +40,7 @@ suppressPackageStartupMessages(library(reshape2))
 suppressPackageStartupMessages(library(pheatmap))
 dir.create(output_path)
 
-h <- get(load(observed_functional_data_path))
+load(observed_functional_data_path)
 ####################################
 #     PART 2: GAIN FPC SCORE       #
 ####################################
@@ -73,6 +73,6 @@ colnames(fpc.score) <- names
 
 write.csv(fpc.score, paste(output_path, "fpc_scores_", name_output, ".csv", sep=""))
 scores_df <- as.data.frame(fpc.score)
-save(scores_df, file=paste(output_path,"scores_df_", name_output, ".RData", sep=""))
+covariates_df <- data.frame(group = as.factor(group))
+save(scores_df,covariates_df, file=paste(output_path,"example1.RData", sep=""))
 print(paste0("END: Preprocessing of the data completed in: ", Sys.time()-time.start))
-
