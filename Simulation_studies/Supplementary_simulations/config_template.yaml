@@ -1,0 +1,64 @@
+# ===================================================================
+# Systematic Simulation Configuration Template
+# ===================================================================
+
+# === Externally set params ===
+# simulation_name: p{p}_n{n_g1}_n{n_g2}
+# iteration: int
+# tot_iteration: int
+# p: int
+# n_g1: int
+# n_g2: int
+# red_number: int -  floor(n_g1/3)
+# save_path: path where to save the results of the simulation
+
+
+# === Simulation Setup ===
+func_path: /Simulation_studies/Step3/Functions/
+save_path: /Simulation_studies/Step3/Simulations_results/
+r_script: /Simulation_studies/Step3/Step3_node_parallel.R
+simulation_name: p10_n50_n50
+iteration: 1
+tot_iteration: 10
+seed_g1: 2025
+seed_g2: 1234
+
+# === Functional Data Generation
+mu: 15 # number of basis used to generate data
+tau: 100 # number of observations in the functional space [0,1]
+p: 10
+n_g1: 50
+n_g2: 50
+max_n_g1: 1000
+max_n_g2: 1000
+model_g1: "cov.mat.model.red.top.bottom"
+model_g2: "cov.mat.model.red.bottom"
+model_continuous: "cov.mat.model.bottom"
+var_cont_type: "pos_cont" # type of variance for the continuous part (pos_cont, cont)
+red_number: 3 # number of edges to be reduced
+
+
+
+# === Reconstruction & Dimensionality Reduction ===
+rec_basis_type: "fourier" # type of basis used to rencontrict the data
+rec_basis_number: 15 # how many basis are used to reconstrct the data
+M: 5  # number of fPC to retain
+
+# === Input Paths ===
+name_output: "2_cov_similation_setting"
+
+# === Model Parameters ===
+L: 100
+K: 5
+thres_ctrl: [0, 0.2, 0.4, 0.8, 1.2, 1.6, 2.0]
+tol_abs: 0.0001
+tol_rel: 0.0001
+eps: 0.00000001
+verbose: false
+p_rand_lam: 0.5
+p_rand_thr: 1
+pre_screen: false
+pre_screen_threshold: null
+
+
+
