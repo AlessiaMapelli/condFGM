@@ -7,4 +7,4 @@ Refer to the folder README for a step-by-step walkthrough of the workflow.
 
 
 #### Simulation studies
-Include the code to run the paper simulations, the comparison with other models proposed in "Zhao, B., Zhai, P. S., Wang, Y. S., & Kolar, M. (2024). High-dimensional functional graphical model structure learning via neighborhood selection approach. Electronic Journal of Statistics, 18(1), 1042-1129" and reproduce the simulations figures.
+Include the code to run the paper simulations, the comparison with other models proposed in "Zhao, B., Wang, Y. S., & Kolar, M. (2022). FuDGE: A method to estimate a functional differential graph in a high-dimensional setting. Journal of Machine Learning Research, 23(82), 1-82." and reproduce the simulations figures.
