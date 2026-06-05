@@ -5,6 +5,28 @@
 .npy
 .fif
 
+# EEG data application 
+
+# EEG source and derived data files (large; source data available from FuDGE repo)
+EEG_data_application/alco_filtered_array.Rdata
+EEG_data_application/contrl_filtered_array.Rdata
+EEG_data_application/EEG_application_input_data.RData
+# Results
+EEG_data_application/results/
+EEG_data_application/figures/
+
+
+# Simulation settings
+Simulation_studies/Step1/simulation_settings/
+Simulation_studies/Step2/simulation_settings/
+Simulation_studies/Supplementary_simulations/simulation_settings/
+
+Simulation_studies/figures/
+Simulation_studies/Supplementary_simulations/figures/
+
+# Reproduciblility outputs
+*.txt
+Session_info.R
+
 # macOS
-.DS_Store
 .DS_Store

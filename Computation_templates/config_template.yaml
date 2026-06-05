@@ -1,0 +1,27 @@
+# === Data preprocessing (Optional) ===
+# If the input data is not already in the form of FPC scores, you can use the following parameters to preprocess the data and extract the FPC scores.
+observed_functional_data_path: your_functional_data.RData # Path to the RData file containing the original functional data to be preprocessed. The RData file should contain a three-dimensional matrix named "discrete_fun_obs" of dimension n_samples x (n_nodes x time_points), where each element is a matrix of dimensions (n_nodes x time_points) representing the functional data for one sample.
+rec_basis_type:  fourier # Type of basis used to reconstruct the data. Options: "fourier", "bsplines"
+rec_basis_number: 15 # Number of basis functions used to reconstruct the data
+time_range: [0, 1] # Range of the functional data (e.g., time range for fMRI data)
+time_points: 100 # Number of time points in the functional data
+
+# === Input and Output Paths ===
+input_path: your_data.RData
+output_path: ./results/
+name_output: my_analysis
+n_nodes: 10                    # Number of functional variables in the multivariate process
+n_basis_for_dim_reduction: 5   # Number of basis functions retained in the dimensionality reduction of the functional multivariate process
+
+# === Model Parameters ===
+L: 100                        # Number of lambda values to be tested
+K: 5                          # K-fold cross-validation
+thres_ctrl: [0, 0.2, 0.4, 0.8, 1.2, 1.6, 2.0]  # Threshold grid
+p_rand_lam: 0.5               # Proportion of lambda values to test in a random search (instead of grid search)
+p_rand_thr: 1                 # Proportion of thresholds to test in a random search (instead of grid search)
+
+# === Symmetrization Parameters ===
+type: OR                      # Edge symmetrization method. Options: OR (Edge exists if detected in either direction), AND (Edge exists only if detected in both directions)
+
+# === General Parameters ===
+verbose: TRUE                 #Enable progress messages. Options: TRUE (Recommended for monitoring), FALSE

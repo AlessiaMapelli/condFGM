@@ -1,6 +1,5 @@
-# Produces individual node results used by Results_evaluation.R.
-# Runs all nodes sequentially on a single machine.
-# Usage: Rscript Computation_templates/Script_sequential.R config_file.yaml
+# Produces individual node results for simulations. Run one node per job in a SLURM array.
+# Usage: Rscript Computation_templates/Script_sbatch_parallel_simulations.R config_file.yaml
 
 # Required packages
 suppressPackageStartupMessages(library(yaml))
@@ -11,9 +10,15 @@ yaml_file_path <- if (length(args) > 0) args[[1]] else stop("Please provide the 
 config <- yaml.load_file(yaml_file_path)
 time.start <- Sys.time()
 
-input_path           <- config$input_path
-output_path          <- config$output_path
-name_output          <- config$name_output
+save_path       <- config$save_path
+simulation_name <- config$simulation_name
+iteration       <- config$iteration
+name_output     <- config$name_output
+input_path      <- paste0(save_path, simulation_name, "/", "seed_", iteration, "/",
+                          "net_est_input_", name_output,".rda")
+output_path     <- paste0(save_path, simulation_name, "/", "seed_", iteration, "/",
+                          "results/")
+
 n_basis              <- config$n_basis_for_dim_reduction
 L                    <- config$L
 K                    <- config$K
@@ -33,6 +38,7 @@ cat("Parameter source:", yaml_file_path, "\n")
 #  NODE-WISE NEIGHBORHOOD ESTIMATION  #
 #######################################
 
+j           <- if (length(args) > 1) as.numeric(args[[2]]) else stop("Please provide the node index.")
 load(input_path)
 if (!(exists("covariates_df", envir = .GlobalEnv) && is.data.frame(covariates_df))) {
   covariates_df <- NULL
@@ -50,18 +56,15 @@ if (!dir.exists(output_path)) {
 
 source(file.path("Computation_templates", "algorithm_functions.R"))
 
-p <- ceiling(ncol(scores_df) / n_basis)
-for (j in 1:p) {
-  run_node_computation(
-    j = j, scores_df = scores_df, covariates_df = covariates_df,
-    n_basis = n_basis, L = L, K = K, thres.ctrl = thres.ctrl,
-    p.rand.lam = p.rand.lam, p.rand.thr = p.rand.thr,
-    tol.abs = tol.abs, tol.rel = tol.rel,
-    iteration = NULL,
-    output_path = output_path, name_output = name_output,
-    pre_screen = pre_screen, pre_screen_threshold = pre_screen_threshold,
-    screening_matrix = screening_matrix, verbose = verbose
-  )
-}
+run_node_computation(
+  j = j, scores_df = scores_df, covariates_df = covariates_df,
+  n_basis = n_basis, L = L, K = K, thres.ctrl = thres.ctrl,
+  p.rand.lam = p.rand.lam, p.rand.thr = p.rand.thr,
+  tol.abs = tol.abs, tol.rel = tol.rel,
+  iteration = iteration,
+  output_path = output_path, name_output = name_output,
+  pre_screen = pre_screen, pre_screen_threshold = pre_screen_threshold,
+  screening_matrix = screening_matrix, verbose = verbose
+)
 
-Sys.time() - time.start
+cat("\nComputational time:", as.numeric(difftime(Sys.time(), time.start, units = "secs")), "seconds\n")

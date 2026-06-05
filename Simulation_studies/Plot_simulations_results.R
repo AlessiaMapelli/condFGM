@@ -1,36 +1,48 @@
-# Load required packages
-install.packages(setdiff(c("tidyverse", "readr"), rownames(installed.packages())))
-library(tidyverse)
-library(readr)
+# Produces Figures 3, 4, 5, 6, 11 of the manuscript
+# (simulation performance and literature comparison).
+# Run from the repository root: Rscript Simulation_studies/Plot_simulations_results.R
 
-base_path <- "Simulation_studies/Step1/"
-setwd(base_path)
+# Required packages
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(readr))
+suppressPackageStartupMessages(library(latex2exp))
 
-# Get list of folders (hotspots)
-results_dirs <- list.dirs(base_path, recursive = FALSE)
-
-# Collect data from each folder
-results_list <- list()
+base.dir <- "Simulation_studies/"
+figures.dir <- file.path(base.dir, "figures")
+if (!dir.exists(figures.dir)) {
+  dir.create(figures.dir, recursive = TRUE)
+}
 
 #################### 
 # SETTING 1
 ####################
 
-for (dir_path in results_dirs) {
-  file_list <- list.files(dir_path, pattern = "^test_results_metices.*\\.csv$", full.names = TRUE)
+sim_step1_path <- paste0(base.dir, "Step1/simulation_settings")
+results_dirs_step1 <- list.dirs(sim_step1_path, recursive = FALSE)
+results_list_step1 <- list()
+
+for (dir_path in results_dirs_step1) {
+  file_list <- list.files(dir_path,
+                          pattern = "^Results_performance_metrics.*\\.csv$",
+                          full.names = TRUE)
   file_path <- file_list[1]
   if (file.exists(file_path) ) {
-    tryCatch({
       df <- read_csv(file_path)[,-1]
       df <- df %>%
         group_by(network, symm) %>%
         summarise(
           med_prec = mean(prec, na.rm = TRUE),
           sd_prec = sd(prec, na.rm = TRUE),
+          max_prec = max(prec, na.rm = TRUE),
+          min_prec = min(prec, na.rm = TRUE),
           med_TPR = mean(TPR, na.rm = TRUE),
           sd_TPR = sd(TPR, na.rm = TRUE),
+          max_TPR = max(TPR, na.rm = TRUE),
+          min_TPR = min(TPR, na.rm = TRUE),
           med_FPR = mean(FPR, na.rm = TRUE),
           sd_FPR = sd(FPR, na.rm = TRUE),
+          max_FPR = max(FPR, na.rm = TRUE),
+          min_FPR = min(FPR, na.rm = TRUE),
           med_F1 = mean(F1, na.rm = TRUE),
           sd_F1 = sd(F1, na.rm = TRUE),
           max_F1 = max(F1, na.rm = TRUE),
@@ -41,21 +53,17 @@ for (dir_path in results_dirs) {
         )
       df$simulation <- basename(dir_path)
       df$p <- as.numeric(str_extract(df$simulation, "(?<=p)\\d+(?=_)"))
-      df$screening <- "Yes"
-      results_list[[length(results_list) + 1]] <- df
-    }, error = function(e) {
-      message("Error reading: ", file_path)
-    })
+      results_list_step1[[length(results_list_step1) + 1]] <- df
+  }else{
+    cat("Results not found for simulation setting: ", dir_path, " \n")
   }
 }
 
-# Combine all results
-combined_data <- bind_rows(results_list)
-
+combined_data <- bind_rows(results_list_step1)
 combined_data <- combined_data %>%
   mutate(p = as.numeric(p))
 
-# Figure 2
+# Figure 3
 temp_data <- combined_data %>%
   filter(network != "GROUP")
 
@@ -98,7 +106,6 @@ plot_obj <- ggplot(
     "DIFF" = "Differential")) +
   scale_linetype_manual(values = method_lt, drop = FALSE) +
   labs(
-    title = "Simulation Performance Metrics - F1 score",
     x = "Sample size for group",
     y = "F1 score",
     color = "Network",
@@ -118,80 +125,109 @@ plot_obj <- ggplot(
     linetype = guide_legend(order = 2)
   )
 
-plot_obj
+ggsave(file.path(figures.dir, "Figure_3_F1_performance.png"),
+       plot_obj, width = 10, height = 5, dpi = 300)
+
+#Figure 11
+plot_obj <- ggplot(
+  temp_data,
+  aes(
+    x = Baseline, y = med_FPR,
+    color = network,
+    linetype = symm,
+    group = interaction(network, symm)
+  )
+) +
+  geom_line(linewidth = 1.10) +
+  geom_point(size = 2.3) +
+  geom_errorbar(
+    aes(ymin = min_FPR, ymax = max_FPR),
+    width = 2,
+    linewidth = 0.3
+  ) +
+  facet_wrap(~ p, scales = "free_x", nrow = 1, labeller = label_both) +
+  scale_color_manual(values = network_cols, drop = FALSE, labels = c(
+    "POP"  = "Population",
+    "DIFF" = "Differential")) +
+  scale_linetype_manual(values = method_lt, drop = FALSE) +
+  labs(
+    x = "Sample size for group",
+    y = "False Positive Rate",
+    color = "Network",
+    linetype = "Symmetrization"
+  ) +
+  coord_cartesian(ylim = c(0, 1)) +
+  theme_minimal(base_size = 14) +
+  theme(
+    legend.position = "right",
+    legend.title = element_text(face = "bold"),
+    strip.background = element_rect(fill = "grey95", color = NA),
+    strip.text = element_text(face = "bold", size = 11),
+    axis.title = element_text(face = "bold")
+  ) +
+  guides(
+    color = guide_legend(order = 1),
+    linetype = guide_legend(order = 2)
+  )
+ggsave(file.path(figures.dir, "Figure_11_FPR_performance.png"),
+       plot_obj, width = 10, height = 5, dpi = 300)
 
 
-#################### 
+####################
 # SETTING 1 - Litt Comparison
 ####################
-
 litt_comp_results_list <- list()
-for (dir_path in results_dirs) {
-  file_list <- list.files(dir_path, pattern = "^test_results_metices.*\\.csv$", full.names = TRUE)
-  file_path <- file_list[1]
-  df <- read_csv(file_path, show_col_types = FALSE)
-  df <- df %>%
-  group_by(network, symm) %>%
-  summarise(
-    med_prec = mean(prec, na.rm = TRUE),
-    sd_prec = sd(prec, na.rm = TRUE),
-    med_TPR = mean(TPR, na.rm = TRUE),
-    sd_TPR = sd(TPR, na.rm = TRUE),
-    med_FPR = mean(FPR, na.rm = TRUE),
-    sd_FPR = sd(FPR, na.rm = TRUE),
-    med_F1 = mean(F1, na.rm = TRUE),
-    sd_F1 = sd(F1, na.rm = TRUE),
-    max_F1 = max(F1, na.rm = TRUE),
-    min_F1 = min(F1, na.rm = TRUE),
-    Baseline = first(Baseline),
-    Differential = first(Differential),
-    .groups = "drop"
-  )
-  df$simulation <- basename(dir_path)
-  df$p <- as.numeric(str_extract(df$simulation, "(?<=p)\\d+(?=_)"))
-  df <- df %>% rename(method=symm)
-  litt_comp_results_list[[length(litt_comp_results_list) + 1]] <- df
-  
-  file_list_litt <- list.files(dir_path, pattern = "^litt_comp_test_results_metices.*\\.csv$", full.names = TRUE)
-  file_path_litt <- file_list_litt[1]
-  df_litt <- read_csv(file_path_litt, show_col_types = FALSE)
-  
-  df_litt <- df_litt%>%
-    group_by(network, method, hyper) %>%
-    summarise(
-      med_prec = mean(prec, na.rm = TRUE),
-      sd_prec = sd(prec, na.rm = TRUE),
-      med_TPR = mean(TPR, na.rm = TRUE),
-      sd_TPR = sd(TPR, na.rm = TRUE),
-      med_FPR = mean(FPR, na.rm = TRUE),
-      sd_FPR = sd(FPR, na.rm = TRUE),
-      med_F1 = mean(F1, na.rm = TRUE),
-      sd_F1 = sd(F1, na.rm = TRUE),
-      max_F1 = max(F1, na.rm = TRUE),
-      min_F1 = min(F1, na.rm = TRUE),
-      Baseline = first(Baseline),
-      Differential = first(Differential),
-      .groups = "drop"
-    )
-  df_litt$simulation <- basename(dir_path)
-  df_litt$p <- as.numeric(str_extract(df_litt$simulation, "(?<=p)\\d+"))
-  
-  df_litt <- df_litt%>%
-    group_by(network, method) %>%
-    slice_max(med_F1, n = 1, with_ties = FALSE) %>%
-    dplyr::select(-hyper)
-  litt_comp_results_list[[length(litt_comp_results_list) + 1]] <- df_litt
-  
-}
 
+for (dir_path in results_dirs_step1) {
+  file_list <- list.files(dir_path,
+                          pattern = "^Litt_comp_results__performance_metrics.*\\.csv$",
+                          full.names = TRUE)
+  file_path <- file_list[1]
+  if (file.exists(file_path) ) {
+    df <- read_csv(file_path, show_col_types = FALSE)
+    df <- df %>%
+      group_by(network, method, hyper) %>%
+      summarise(
+        med_prec = mean(prec, na.rm = TRUE),
+        sd_prec = sd(prec, na.rm = TRUE),
+        max_prec = max(prec, na.rm = TRUE),
+        min_prec = min(prec, na.rm = TRUE),
+        med_TPR = mean(TPR, na.rm = TRUE),
+        sd_TPR = sd(TPR, na.rm = TRUE),
+        max_TPR = max(TPR, na.rm = TRUE),
+        min_TPR = min(TPR, na.rm = TRUE),
+        med_FPR = mean(FPR, na.rm = TRUE),
+        sd_FPR = sd(FPR, na.rm = TRUE),
+        max_FPR = max(FPR, na.rm = TRUE),
+        min_FPR = min(FPR, na.rm = TRUE),
+        med_F1 = mean(F1, na.rm = TRUE),
+        sd_F1 = sd(F1, na.rm = TRUE),
+        max_F1 = max(F1, na.rm = TRUE),
+        min_F1 = min(F1, na.rm = TRUE),
+        Baseline = first(Baseline),
+        Differential = first(Differential),
+        .groups = "drop"
+      )
+    df$simulation <- basename(dir_path)
+    df$p <- as.numeric(str_extract(df$simulation, "(?<=p)\\d+(?=_)"))
+    df <- df%>%
+      group_by(network, method) %>%
+      slice_max(med_F1, n = 1, with_ties = FALSE) %>%
+      dplyr::select(-hyper)
+    litt_comp_results_list[[length(litt_comp_results_list) + 1]] <- df
+  }else{
+    cat("Results of litt comparison not found for simulation setting: ", dir_path, " \n")
+  }
+}
 
 litt_comp_combined_data <- bind_rows(litt_comp_results_list)
 
-litt_comp_combined_data <- litt_comp_combined_data %>%
-  mutate(p = as.numeric(p))
+combined_data <- combined_data %>%
+  rename(method = symm)
 
-# Figure 3
+litt_comp_combined_data <- rbind(combined_data,litt_comp_combined_data)
 
+# Figure 4
 litt_comp_combined_data_diff <- litt_comp_combined_data %>%
   filter(network=="DIFF" & method != "AND")
 
@@ -223,13 +259,11 @@ plot_obj <- ggplot(
 ) +
   geom_line() +
   geom_point(size = 2.3) +
-  # If you want error bars back:
-  # geom_errorbar(aes(ymin = min_F1, ymax = max_F1), width = 2, linewidth = 0.3) +
   facet_wrap(~ p, scales = "free_x", nrow = 1, labeller = label_both) +
   scale_color_manual(values = method_cols, drop = FALSE) +
-  scale_linewidth_manual(values = method_lw, guide = "none") +  # hide linewidth legend (cleaner)
+  scale_linewidth_manual(values = method_lw, guide = "none") +  
   labs(
-    title = NULL,  # journals often prefer title in caption, not inside the plot
+    title = NULL,  
     x = "Sample size for group",
     y = "F1 score",
     color = "Method"
@@ -244,171 +278,39 @@ plot_obj <- ggplot(
     axis.title = element_text(face = "bold")
   )
 
-plot_obj
-
-# Supp Figure 1
-sel_dirs <- c("Simulation_studies/Step1/p25_n100_n100") 
-dir_path <- sel_dirs[1]
-results_list <- list()
-file_list <- list.files(dir_path, pattern = "^test_results_metices.*\\.csv$", full.names = TRUE)
-file_path <- file_list[1]
-df <- read_csv(file_path, show_col_types = FALSE)
-df <- df %>%
-  group_by(network, symm) %>%
-  summarise(
-    med_prec = mean(prec, na.rm = TRUE),
-    sd_prec = sd(prec, na.rm = TRUE),
-    med_TPR = mean(TPR, na.rm = TRUE),
-    sd_TPR = sd(TPR, na.rm = TRUE),
-    med_FPR = mean(FPR, na.rm = TRUE),
-    sd_FPR = sd(FPR, na.rm = TRUE),
-    med_F1 = mean(F1, na.rm = TRUE),
-    sd_F1 = sd(F1, na.rm = TRUE),
-    max_F1 = max(F1, na.rm = TRUE),
-    min_F1 = min(F1, na.rm = TRUE),
-    Baseline = first(Baseline),
-    Differential = first(Differential),
-    .groups = "drop"
-  )
-df$simulation <- basename(dir_path)
-df$p <- as.numeric(str_extract(df$simulation, "(?<=p)\\d+(?=_)"))
-
-file_list_litt <- list.files(dir_path, pattern = "^litt_comp_test_results_metices.*\\.csv$", full.names = TRUE)
-file_path_litt <- file_list_litt[1]
-df_litt <- read_csv(file_path_litt, show_col_types = FALSE)
-View(df_litt)
-try <- df_litt%>%
-  group_by(network, method, hyper) %>%
-  summarise(
-    med_prec = mean(prec, na.rm = TRUE),
-    sd_prec = sd(prec, na.rm = TRUE),
-    med_TPR = mean(TPR, na.rm = TRUE),
-    sd_TPR = sd(TPR, na.rm = TRUE),
-    med_FPR = mean(FPR, na.rm = TRUE),
-    sd_FPR = sd(FPR, na.rm = TRUE),
-    med_F1 = mean(F1, na.rm = TRUE),
-    sd_F1 = sd(F1, na.rm = TRUE),
-    max_F1 = max(F1, na.rm = TRUE),
-    min_F1 = min(F1, na.rm = TRUE),
-    Baseline = first(Baseline),
-    Differential = first(Differential),
-    .groups = "drop"
-  )
-try$simulation <- basename(dir_path)
-try$p <- as.numeric(str_extract(try$simulation, "(?<=p)\\d+"))
-
-df_expanded <- df %>%
-  rename(method = symm) %>%        
-  mutate(row_id = row_number()) %>%  
-  uncount(weights = 41) %>%          
-  group_by(row_id) %>%               
-  mutate(hyper = row_number()) %>%   
-  ungroup() %>%
-  dplyr::select(-row_id) %>%
-  relocate(hyper, .after = 2)
-
-df_expanded
-
-try3 <- rbind(try, df_expanded)
-
-try3 <- try3[try3$method != "AND", ]
-try3[try3$method == "OR", ]$method <- "Proposed Method"
-
-
-method_levels <- c("Proposed Method", "FuDGE", "FGL", "FFGL", "FFGL2")
-try3$method <- factor(try3$method, levels = method_levels)
-
-method_cols <- c(
-  "FFGL"            = "#E69F00",
-  "FFGL2"           = "#F4D06F",
-  "FGL"             = "#D55E00",
-  "FuDGE"           = "#C10A0A",
-  "Proposed Method" = "#0072B2"
-)
-
-method_lw <- c(
-  "FFGL"            = 0.45,
-  "FFGL2"           = 0.45,
-  "FGL"             = 0.70,
-  "FuDGE"           = 0.70,
-  "Proposed Method" = 1.10
-)
-
-plot_obj <- ggplot(
-  try3[try3$network=="DIFF", ],
-  aes(x = hyper, y = med_F1, group = method, color = method, linewidth = method)
-) +
-  geom_line() +
-  geom_point(size = 2.3) +
-  # If you want error bars back:
-  # geom_errorbar(aes(ymin = min_F1, ymax = max_F1), width = 2, linewidth = 0.3) +
-  facet_wrap(~ p, scales = "free_x", nrow = 1, labeller = label_both) +
-  scale_color_manual(values = method_cols, drop = FALSE) +
-  scale_linewidth_manual(values = method_lw, guide = "none") +  # hide linewidth legend (cleaner)
-  labs(
-    title = "Simulation F1 Performance Metrics different hyper metrics - p=25, n=10",  # journals often prefer title in caption, not inside the plot
-    x = "Hyperparam",
-    y = "F1 score",
-    color = "Method"
-  ) +
-  coord_cartesian(ylim = c(0, 1)) +
-  theme_minimal(base_size = 14)  +
-  theme(
-    legend.position = "right",
-    legend.title = element_text(face = "bold"),
-    strip.background = element_rect(fill = "grey95", color = NA),
-    strip.text = element_text(face = "bold", size = 11),
-    axis.title = element_text(face = "bold")
-  )
-
-plot_obj
+ggsave(file.path(figures.dir, "Figure_4_literature_comparison.png"),
+       plot_obj, width = 10, height = 5, dpi = 300)
 
 
 #################### 
 # SETTING 1 - Comp time
 ####################
 
-
-computational_times <- read_csv("computational_times.csv")
-computational_times$comp_time_sec <- computational_times$comp_time
+computational_times <- read_csv(file.path(sim_step1_path, "computational_times.csv"))
 computational_times <- computational_times %>%
-  dplyr::select(p,n,comp_time_sec) %>%
-  group_by(p, n) %>%
+  mutate(comp_time_sec = comp_time) %>%
+  dplyr::select(p, n_g1, method, iteration, comp_time_sec) %>%
+  rename(n = n_g1) %>%
+  filter(n == 200) %>%
+  group_by(iteration, method) %>%
+  mutate(
+    baseline_time = comp_time_sec[p == 10][1],
+    scaled_comp_time = comp_time_sec / baseline_time
+  ) %>%
+  ungroup() %>%
+  group_by(p, n, method) %>%
   summarise(
-    med_comp_time_sec= mean(comp_time_sec, na.rm = TRUE),
-    sd_comp_time_sec = sd(comp_time_sec, na.rm = TRUE),
-    max_comp_time_sec = max(comp_time_sec, na.rm = TRUE),
-    min_comp_time_sec = min(comp_time_sec, na.rm = TRUE),
+    med_scaled_comp_time = mean(scaled_comp_time, na.rm = TRUE),
+    sd_scaled_comp_time  = sd(scaled_comp_time, na.rm = TRUE),
+    max_scaled_comp_time = max(scaled_comp_time, na.rm = TRUE),
+    min_scaled_comp_time = min(scaled_comp_time, na.rm = TRUE),
     .groups = "drop"
   )
-
-computational_times$method <- "Our Method"
-
-computational_times_litt_comp <- read_csv("computational_times_litt_comp.csv")
-computational_times_litt_comp$comp_time_sec <- computational_times_litt_comp$comp_time
-computational_times_litt_comp[computational_times_litt_comp$comp_time_sec<5, ]$comp_time_sec <- computational_times_litt_comp[computational_times_litt_comp$comp_time_sec<5, ]$comp_time_sec*60
-computational_times_litt_comp <- computational_times_litt_comp %>%
-  dplyr::select(p,n,comp_time_sec) %>%
-  group_by(p, n) %>%
-  summarise(
-    med_comp_time_sec= mean(comp_time_sec, na.rm = TRUE),
-    sd_comp_time_sec = sd(comp_time_sec, na.rm = TRUE),
-    max_comp_time_sec = max(comp_time_sec, na.rm = TRUE),
-    min_comp_time_sec = min(comp_time_sec, na.rm = TRUE),
-    .groups = "drop"
-  )
-
-computational_times_litt_comp$method  <- "FuDGE"
-
-computational_times_full <- rbind(computational_times, computational_times_litt_comp)
-
-str(computational_times_full)
 
 method_levels <- c("Our Method", "FuDGE")
-computational_times_full$method <- factor(computational_times_full$method,
+computational_times$method <- factor(computational_times$method,
                                               levels = method_levels)
 
-# 2) Colorblind-friendly palette (edit as you like)
 method_cols <- c(
   "FuDGE"           = "#C10A0A",
   "Our Method" = "#0072B2"
@@ -419,26 +321,24 @@ method_lw <- c(
   "Our Method" = 1.10
 )
 
-computational_times_red <- computational_times_full %>%
-  filter(n == 200)
 
-
-# Figure 4
+# Figure 5
 plot_obj <- ggplot(
-  computational_times_red,
-  aes(x = p, y = med_comp_time_sec, group = method, color = method, linewidth = method)
+  computational_times,
+  aes(x = p, y = med_scaled_comp_time, group = method, color = method, linewidth = method)
 ) +
   geom_line() +
   geom_point(size = 2.3) +
-  # If you want error bars back:
-  geom_errorbar(aes(ymin = min_comp_time_sec, ymax = max_comp_time_sec), width = 2, linewidth = 0.3) +
-  #facet_wrap(~ p, scales = "free_x", nrow = 1, labeller = label_both) +
+  geom_errorbar(
+    aes(ymin = min_scaled_comp_time, ymax = max_scaled_comp_time),
+    width = 2, linewidth = 0.3
+  ) +
   scale_color_manual(values = method_cols, drop = FALSE) +
-  scale_linewidth_manual(values = method_lw, guide = "none") +  # hide linewidth legend (cleaner)
+  scale_linewidth_manual(values = method_lw, guide = "none") +  #
   labs(
-    title = NULL,  # journals often prefer title in caption, not inside the plot
+    title = NULL,  
     x = "Network size",
-    y = "Computational time",
+    y = "Computational time proportional to p=10",
     color = "Method"
   ) +
   theme_minimal(base_size = 14)  +
@@ -450,65 +350,59 @@ plot_obj <- ggplot(
     axis.title = element_text(face = "bold")
   )
 
-plot_obj
+ggsave(file.path(figures.dir, "Figure_5_computational_time.png"),
+       plot_obj, width = 10, height = 6, dpi = 300)
 
 
 
-#################### 
-# SETTING 2 
+####################
+# SETTING 2
 ####################
 
-base_path <- "Simulation_studies/Step2/"
-setwd(base_path)
-
-# Get list of folders (hotspots)
-sel_dirs <- list.dirs(base_path, recursive = FALSE)
-
-results_list <- list()
+sim_step2_path <- paste0(base.dir, "Step2/simulation_settings")
+sel_dirs <- list.dirs(sim_step2_path, recursive = FALSE)
+results_list_step2 <- list()
 
 for (dir_path in sel_dirs) {
-  file_list <- list.files(dir_path, pattern = "^test_results_metices.*\\.csv$", full.names = TRUE)
-  if (length(file_list) == 1) {
-    file_path <- file_list[1]
-  } else if (length(file_list) > 1) {
-    warning("Multiple matching files found in ", dir_path, "; using the first.")
-    file_path <- file_list[1]
-  } else {
-    next  # No matching file, skip this directory
-  }
+  file_list <- list.files(dir_path,
+                          pattern = "^Results_performance_metrics.*\\.csv$",
+                          full.names = TRUE)
+  file_path <- file_list[1]
   if (file.exists(file_path) ) {
-    tryCatch({
-      df <- read_csv(file_path, show_col_types = FALSE)
-      df <- df %>%
-        group_by(network, symm) %>%
-        summarise(
-          med_prec = mean(prec, na.rm = TRUE),
-          sd_prec = sd(prec, na.rm = TRUE),
-          med_TPR = mean(TPR, na.rm = TRUE),
-          sd_TPR = sd(TPR, na.rm = TRUE),
-          med_FPR = mean(FPR, na.rm = TRUE),
-          sd_FPR = sd(FPR, na.rm = TRUE),
-          med_F1 = mean(F1, na.rm = TRUE),
-          sd_F1 = sd(F1, na.rm = TRUE),
-          max_F1 = max(F1, na.rm = TRUE),
-          min_F1 = min(F1, na.rm = TRUE),
-          Baseline = first(Baseline),
-          Differential = first(Differential),
-          .groups = "drop"
-        )
-      df$simulation <- basename(dir_path)
-      df$simulation_type <- str_sub(df$simulation, -2)
-      df$p <- as.numeric(str_extract(df$simulation, "(?<=p)\\d+(?=_)"))
-      results_list[[length(results_list) + 1]] <- df
-    }, error = function(e) {
-      message("Error reading: ", file_path)
-    })
+    df <- read_csv(file_path)[,-1]
+    df <- df %>%
+      group_by(network, symm) %>%
+      summarise(
+        med_prec = mean(prec, na.rm = TRUE),
+        sd_prec = sd(prec, na.rm = TRUE),
+        max_prec = max(prec, na.rm = TRUE),
+        min_prec = min(prec, na.rm = TRUE),
+        med_TPR = mean(TPR, na.rm = TRUE),
+        sd_TPR = sd(TPR, na.rm = TRUE),
+        max_TPR = max(TPR, na.rm = TRUE),
+        min_TPR = min(TPR, na.rm = TRUE),
+        med_FPR = mean(FPR, na.rm = TRUE),
+        sd_FPR = sd(FPR, na.rm = TRUE),
+        max_FPR = max(FPR, na.rm = TRUE),
+        min_FPR = min(FPR, na.rm = TRUE),
+        med_F1 = mean(F1, na.rm = TRUE),
+        sd_F1 = sd(F1, na.rm = TRUE),
+        max_F1 = max(F1, na.rm = TRUE),
+        min_F1 = min(F1, na.rm = TRUE),
+        Baseline = first(Baseline),
+        Differential = first(Differential),
+        .groups = "drop"
+      )
+    df$simulation <- basename(dir_path)
+    df$p <- as.numeric(str_extract(df$simulation, "(?<=p)\\d+(?=_)"))
+    df$simulation_type <- str_sub(df$simulation, -2)
+    results_list_step2[[length(results_list_step2) + 1]] <- df
+  }else{
+    cat("Results not found for simulation setting: ", dir_path, " \n")
   }
 }
 
-# Combine all results
-combined_data <- bind_rows(results_list)
-
+combined_data <- bind_rows(results_list_step2)
 combined_data <- combined_data %>%
   filter(symm == "OR")
 
@@ -522,8 +416,6 @@ p_cols <- c(
   "50" = "#0072B2"
 )
 
-library(latex2exp)
-
 network_labels <- c(
   DIFF  = "Differential",
   GROUP = "Group $\\textit{G}_1$",
@@ -532,8 +424,7 @@ network_labels <- c(
 
 pd <- position_dodge(width = 0.55)
 
-# Figure 5
-
+# Figure 6
 plot_obj <- ggplot(
   combined_data,
   aes(x = network, y = med_F1, color = p, group = p)
@@ -578,8 +469,7 @@ plot_obj <- ggplot(
     strip.text        = element_text(face = "bold"),
     axis.title        = element_text(face = "bold"),
     axis.text.x = element_text(angle = 30, hjust = 1)
-  ) 
+  )
 
-plot_obj
-
-
+ggsave(file.path(figures.dir, "Figure_6_scenario_comparison.png"),
+       plot_obj, width = 10, height = 5, dpi = 300)

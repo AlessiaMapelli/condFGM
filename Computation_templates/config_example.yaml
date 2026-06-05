@@ -1,31 +1,27 @@
 # === Data preprocessing ===
-observed_functional_data_path: Original_data_example_1.RData
-rec_basis_type: "fourier" #type of basis used to rencontrict the data Options: "fourier", "bsplines"
-time_range: [0, 1] # range of the functional data
-time_points: 100 # number of time points in the functional data
-rec_basis_number: 15 # how many basis are used to reconstrct the data
-
-n_nodes: 10
-dim_red_basis_number: 5  # number of fPC to retain
+observed_functional_data_path: Computation_templates/Example_data.RData
+rec_basis_type: fourier 
+time_range: [0, 1] 
+time_points: 100
+rec_basis_number: 15 
 
 
 # === Input and Output Paths ===
-input_path: example1.RData
-#RData file containing the score data to be analyzed saved as scores_df and the covraiates to be included in the model as covariates_df
-#Note: 
-# - the covariates_df need to be in a data.frame format with the correct type definition for each covariate (e.g. factor for categorical variables)
-# - the covariates_df can be exluded if no covariates are to be included in the model
-
-output_path: /group/diangelantonio/users/alessia_mapelli/Brain_simulations/Test_computational_template/
+input_path: Computation_templates/Example_data_score.RData
+output_path: Computation_templates/results/
 name_output: example
+n_nodes: 10
+n_basis_for_dim_reduction: 5  # number of fPC to retain
 
 # === Model Parameters ===
 L: 100
 K: 5
 thres_ctrl: [0, 0.2, 0.4, 0.8, 1.2, 1.6, 2.0]
-verbose: TRUE
 p_rand_lam: 0.5
 p_rand_thr: 1
 
 # === Symmetrization Parameters ===
 type: OR
+
+# === General Parameters ===
+verbose: TRUE

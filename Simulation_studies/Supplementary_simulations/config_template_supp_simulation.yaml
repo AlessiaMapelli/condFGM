@@ -1,0 +1,66 @@
+# ===================================================================
+# Systematic Simulation Configuration Template
+# ===================================================================
+
+# === Externally set params ===
+# save_path: str - base path to save the results of the simulation. The actual output will be saved in save_path/simulation_name, where simulation_name is defined below.
+# simulation_name: p{p}_n{n_g1}_n{n_g2} - name of the simulation, used to name the output files. The convention is to include the key parameters of the simulation in the name, such as p{p}_n{n_g1}_n{n_g2} to indicate the number of nodes and sample sizes for group 1 and group 2.
+# iteration: int - iteration number, used to name the output files and set the random seeds for reproducibility. 
+# tot_iteration: int - total number of iterations for the simulation, used to monitor the progress of the simulation and collect all results.
+# p: int - number of nodes in the multivariate process, used to set the dimensionality of the generated data and the input for the analysis.
+# n_g1: int - number of observations in group 1, used to set the sample size for group 1 in the data generation and analysis.
+# n_g2: int - number of observations in group 2, used to set the sample size for group 2 in the data generation and analysis.
+# red_number: int -  floor(n_g1/3) - number of nodes whose connectivty is changed in model_g1 and model_g2, used to set the number of nodes that differ between the two groups in the data generation.
+
+
+# === Simulation Setup ===
+func_path: Simulation_studies/Helper_functions
+save_path: NULL # Externally set by the modify_yaml_config.py script
+r_script: Simulation_studies/Script_sbatch_parallel_simulations.R
+simulation_name: NULL #Externally set by the modify_yaml_config.py script
+iteration: NULL #Externally set by the modify_yaml_config.py script
+tot_iteration: NULL #Externally set by the modify_yaml_config.py script
+seed_g1: 2025 # Set the random seed for group 1 data generation (for reproducibility)
+seed_g2: 1234 # Set the random seed for group 2 data generation (for reproducibility)
+
+# === Functional Data Generation
+mu: 15 # number of basis used to generate data
+tau: 100 # number of observations in the functional space [0,1]
+p: NULL # Externally set by the modify_yaml_config.py script
+n_g1: NULL # Externally set by the modify_yaml_config.py script
+n_g2: NULL # Externally set by the modify_yaml_config.py script
+model_g1: "cov.mat.model.red.top.bottom" # model used to generate the base adjacency matrix for group 1.
+model_g2: "cov.mat.model.red.bottom" # model used to generate the the base adjacency matrix for group 2.
+model_continuous: "cov.mat.model.bottom" # model used to generate the differential adjacency matrix linked to the continuous factor.
+var_cont_type: "pos_cont" # type of variance for the continuous part (pos_cont, cont)
+red_number: NULL # Externally set by the modify_yaml_config.py script
+
+# === Reconstruction & Dimensionality Reduction ===
+observed_functional_data_path: NULL # Automatically set to the output of the data generation step, so no need to change it.
+rec_basis_type: "fourier" 
+rec_basis_number: 15 
+time_range: NULL # Automatically set to [0,1], so no need to change it.
+time_points: NULL # Automatically set to tau, so no need to change it.
+
+# === Input and Output Paths ===
+input_path: NULL # Automatically set to the output of the data preprocessing step, so no need to change it.
+output_path: NULL # Automatically set to save_path/simulation_name, so no need to change it.
+name_output: "results_supp_simulations" 
+n_nodes: NULL    # Automatically set to p, so no need to change it.
+n_basis_for_dim_reduction: 5   
+
+# === Model Parameters ===
+L: 100
+K: 5
+thres_ctrl: [0, 0.2, 0.4, 0.8, 1.2, 1.6, 2.0]
+p_rand_lam: 0.5
+p_rand_thr: 1
+
+# === Symmetrization Parameters ===
+type: NULL #Both the OR and AND methods will be tested, so no need to change it.
+
+# === General Parameters ===
+verbose: FALSE  
+
+
+
