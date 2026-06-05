@@ -1,25 +1,27 @@
-rm(list=ls(all=TRUE))
-packages <- c('yaml')
-install.packages(setdiff(packages, rownames(installed.packages())), dependencies = TRUE)
+# Required packages
 suppressPackageStartupMessages(library(yaml))
 suppressPackageStartupMessages(library(reshape2))
 suppressPackageStartupMessages(library(ggplot2))
 suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(stringr))
 
-#################################################
-## USER DEFINED PARAMETERS (MODIFY THE PATH TO THE CORRECT YAML FILE)
-#################################################
+# Load parameters from YAML configuration file
 args <- commandArgs(trailingOnly = TRUE)
-yaml_file_path = args[[1]]
+yaml_file_path <- if (length(args) > 0) args[[1]] else
+  stop("Please provide the path to the YAML configuration file as an argument.")
 config <- yaml.load_file(yaml_file_path)
 
-#################################################
-## 0. USER DEFINED PARAMETERS (MODIFY THIS PART)
-#################################################
 output_path = config$output_path
 name_output = config$name_output
 input_path = config$input_path
 type = config$type
+
+num_nodes = config$n_nodes
+n_comp <- config$n_basis_for_dim_reduction
+
+####################################
+#   RESULTS EVALUATION and PLOTS   #
+####################################
 
 load(input_path)
 
@@ -31,10 +33,6 @@ if ((exists("covariates_df", envir = .GlobalEnv) && is.data.frame(covariates_df)
 } else{ n_groups <- 1
 cov_names <- "population" }
 
-num_nodes = config$n_nodes
-n_comp <- config$dim_red_basis_number
-
-##############################################
 
 G.our <- matrix(NA, nrow = num_nodes, ncol = num_nodes*n_groups)
 for(j in 1: num_nodes){
@@ -86,13 +84,38 @@ for(i in 1:n_groups){
   colnames(adj_df) <- c("Row", "Col", "Value")
   adj_df$Value <- as.numeric(adj_df$Value)
   plot <- ggplot(adj_df, aes(x = Col, y = Row, fill = Value)) +
-  geom_tile() +
-  scale_fill_gradient(low = "white", high = "black") +
-  theme_minimal() +
-  coord_fixed() +
-  scale_y_reverse() +  # to match matrix view
-  labs(title = plot_title, x = "", y = "")
-  ggsave(plot, filename=paste0(output_path, name_output, "_Adjacency_matrix_node_",cov_names[i], ".png"), width=8, height=8, dpi=300)
+    geom_tile(color = "grey92", linewidth = 0.15) +
+    coord_fixed() +
+    scale_y_reverse() +
+    labs(
+      title = str_wrap(plot_title, width = 42),
+      x = NULL,
+      y = NULL
+    ) +
+    theme_minimal(base_size = 13) +
+    theme(
+      axis.text = element_blank(),
+      axis.ticks = element_blank(),
+      panel.grid = element_blank(),
+      plot.title = element_text(
+        size = 20,
+        hjust = 0.5,
+        vjust =-1.5,
+        lineheight = 0.95 
+      ),
+      legend.title = element_text(size = 16, face = "bold"),
+      legend.text = element_text(size = 14),
+      legend.key.height = unit(1.2, "cm"),
+      legend.key.width = unit(0.35, "cm"),
+      plot.margin = margin(4, 4, 4, 4)
+    ) +
+    aes(fill = factor(Value, levels = c(0, 1))) + scale_fill_manual(
+      values = c( "0" = "white","1" = "black"),
+      labels = c("0" = "Absent", "1" = "Present"),
+      name = "Edge"
+    )
+  fname <- paste0(output_path, name_output, "_Adjacency_matrix_node_", cov_names[i], ".png")
+  ggsave(plot, filename = fname, width = 8, height = 8, dpi = 300)
 
 
   if(i !=1){
@@ -169,32 +192,50 @@ for(i in 1:n_groups){
   G.our.weighted[[cov_names[i]]] <- G.cov.weighted
 
   adj_df <- melt(G.cov.simm.weighted, varnames = c("Row","Col"), value.name = "Value")
-  adj_df <- adj_df %>%
-    mutate(Value_logic = case_when(
-      is.na(Value)      ~ "0",
-      Value < 1         ~ "-2",
-      Value > 1         ~ "2",
-      TRUE              ~ "NA"
-    ))
-  
-  plot <- ggplot(adj_df, aes(x = Col, y = Row, fill = as.factor(Value_logic))) +
-    geom_tile() +
-    scale_fill_manual(
-      values = c("-2" = "blue", "1" = "black", "2" = "red", "0"="white"),
-      labels = c("-2" = "Reduced edges", "1" = "Common edges", "2" = "Enlarge edges", "0"="Edges not present"),
-      name = "Edge Type"
-    ) +
-    theme_minimal() +
+  plot<- ggplot(adj_df, aes(x = Col, y = Row, fill = Value)) +
+    geom_tile(color = "grey92", linewidth = 0.15) +
     coord_fixed() +
     scale_y_reverse() +
-    labs(title = paste0("Full Estimated Adjacency Matrix - Differential contribution ", cov_names[i]), x = "", y = "")
-
-  ggsave(plot, filename = paste0(output_path, name_output, "_Adjacency_matrix_node_diff_weights_",cov_names[i],".png"), width = 8, height = 8, dpi = 300)
+    labs(
+      title = str_wrap(
+        paste0("Direction of changes in the estimated adjacency matrix - ", cov_names[i]),
+        width = 42
+      ),
+      x = NULL,
+      y = NULL
+    ) +
+    theme_minimal(base_size = 13) +
+    theme(
+      axis.text = element_blank(),
+      axis.ticks = element_blank(),
+      panel.grid = element_blank(),
+      plot.title = element_text(
+        size = 20,
+        hjust = 0.5,
+        vjust = -1.5,
+        lineheight = 0.95 
+      ),
+      legend.title = element_text(size = 16, face = "bold"),
+      legend.text = element_text(size = 14),
+      legend.key.height = unit(1.2, "cm"),
+      legend.key.width = unit(0.35, "cm"),
+      plot.margin = margin(4, 4, 4, 4)
+    ) +
+    scale_fill_gradient2(
+      low = "darkblue",
+      mid = "white",
+      high = "darkred",
+      midpoint = 1,
+      na.value = "white",
+      name = "Value"
+    )
+  fname_w <- paste0(output_path, name_output,
+                    "_Adjacency_matrix_node_diff_weights_", cov_names[i], ".png")
+  ggsave(plot, filename = fname_w, width = 8, height = 8, dpi = 300)
 }
   
 }
 
-# Save the matrix
-save(G.our.symm,G.our.symm.weighted,G.our.symm.warning, G.our.weighted , file = paste0(output_path, name_output, "_Adj_estimation.rda"))
+save(G.our.symm, G.our.symm.weighted, G.our.symm.warning, G.our.weighted,
+     file = paste0(output_path, name_output, "_Adj_estimation.rda"))
 cat("Results saved to ", paste(output_path, name_output, "_Adj_estimation.rda", sep=""), "\n")
-#################################################

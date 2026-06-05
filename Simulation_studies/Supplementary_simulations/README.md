@@ -1,145 +1,155 @@
 # Supplementary Simulations for condFGM
 
-This folder contains the simulation pipeline for the supplementary analyses presented in our paper. These simulations evaluate the performance of the conditional Functional Graphical Model (condFGM) across a broader and more systematic range of settings, varying both the number of nodes (`p`) and sample sizes (`n`) across multiple iterations.
+This folder contains the simulation pipeline for the supplementary analyses presented in our paper. These simulations extend the main studies by evaluating condFGM in a setting with **both a categorical group covariate and a continuous covariate**, varying the number of nodes (`p`) and sample sizes (`n`) across a wider range than the main Step 1 and Step 2 analyses.
+
+---
 
 ## Repository Structure
 
 ```
 Supplementary_simulations/
-├── Functions/                              # Helper functions for data generation and algorithm
-├── config_template.yaml                    # Template configuration file for batch simulations
-├── modify_yaml_config.py                   # Python utility to generate per-iteration config files
-├── Data_simulator_full_data.R              # Generates functional data for all simulation settings
-├── Step3_node_parallel.R                   # Node-level parallel algorithm execution
-├── Sbatch_simulations_luncher_tests.sh     # Main launcher: config generation, data simulation, and job submission
-├── Sbatch_parallel_luncher_tests.sh        # Submits node-level parallel SLURM jobs for a single config
-├── Sbatch_parallel_tests.sbatch            # SLURM job definition for individual node jobs
-├── Check_results_screening_procedure_tests.R  # Validates and collects results per simulation setting
-└── Plot_simulations_results.R              # Results visualization
+├── config_template_supp_simulation.yaml    # Template configuration file for batch simulations
+├── Full_data_simulator_supp_simulation.R   # Generates functional data for all simulation settings
+├── Results_evaluation_supp_simulation.R    # Assembles results and computes F1/TPR/FPR per setting
+├── Plot_simulations_results_supp.R         # Generates supplementary manuscript figures (Figures 9, 10, 12)
+└──  Sbatch_simulations_luncher_Supp.sim.sh  # Main launcher: config generation, data simulation, job submission, and results evaluation
 ```
 
-## Prerequisites
+> **Shared scripts**: the node-level parallel estimation and SLURM job submission reuse the shared scripts from `Simulation_studies/`:
+> - `Simulation_studies/Sbatch_parallel_luncher_simulations.sh` — submits one SLURM job per node
+> - `Simulation_studies/Script_sbatch_parallel_simulations.R` — node-level estimation script
+> - `Simulation_studies/Helper_functions/modify_yaml_config.py` — per-iteration config generator
 
-- R (version 4.0 or higher)
-- Python 3 with `pyyaml` package
-- SLURM job scheduler (for parallel execution)
-- Required R packages (will be installed automatically by the scripts)
+---
+
+## System Requirements
+
+- R (≥ 4.0)
+- Python 3
+- SLURM workload manager
+- R packages (must be installed manually):
+
+| Script | Packages |
+|---|---|
+| `Full_data_simulator_supp_simulation.R` | `yaml`, `fda`, `matrixcalc`, `MASS`, `mvtnorm`, `abind`, `ggplot2`, `reshape2`, `pheatmap` |
+| `Script_sbatch_parallel_simulations.R` (shared) | `yaml` (plus packages from `Computation_templates/algorithm_functions.R`) |
+| `Results_evaluation_supp_simulation.R` | `yaml`, `reshape2`, `ggplot2`, `dplyr`, `stringr` |
+| `Plot_simulations_results_supp.R` | `tidyverse`, `readr`, `png`, `grid`, `patchwork` |
+
+- Python packages (must be installed manually):
+
+| Script | Packages |
+|---|---|
+| `Helper_functions/modify_yaml_config.py` (shared) | `pyyaml` |
+
+> **Important**: all scripts must be run from the **repository root** (the folder containing `Simulation_studies/`), not from inside any subfolder.
+
+---
 
 ## Quick Start
 
-The full pipeline can be launched with a single command from the `Supplementary_simulations/` directory:
-
 ```bash
-bash Sbatch_simulations_luncher_tests.sh
+bash Simulation_studies/Supplementary_simulations/Sbatch_simulations_luncher_Supp.sim.sh
 ```
 
-This orchestrates all steps: config file generation, data simulation, parallel job submission, and results checking.
+This orchestrates all stages: config file generation, data simulation, parallel job submission, and results evaluation.
+
+The complete pre-computed simulation results are available at https://osf.io/ta3bq/overview for reproducibility without re-running the full pipeline.
+
+---
 
 ## Detailed Pipeline Instructions
 
-### Configuration Setup
+The launcher follows the same four-stage structure as the main simulation studies: config generation → data simulation → parallel job submission → results evaluation.
 
-Each simulation iteration has its own configuration file generated from `config_template.yaml`. Key parameters include:
+**Parameter grid** (defined at lines 17–19 of `Sbatch_simulations_luncher_Supp.sim.sh`):
+- `p_seq`: `(10 50)`
+- `n_g1_seq` / `n_g2_seq`: `(50 75 100 150 200 400 750 1000)` (equal group sizes)
+- `tot_iteration`: 10
 
-#### Data Configuration
-- `save_path`: Directory where simulation results will be saved
-- `simulation_name`: Automatically set to `p{p}_n{n_g1}_n{n_g2}`
-- `p`: Number of nodes (graph dimension)
-- `n_g1`, `n_g2`: Sample sizes for the two groups
-- `red_number`: Number of edges affected by the group-specific model (set to `floor(p/3)`)
-- `model_g1`, `model_g2`: Model specifications for the two groups
-- `model_continuous`: Model specification for the continuous covariate component
+### Stage 1 — Generate Per-Iteration Configuration Files
 
-#### Algorithm Parameters
-- `rec_basis_type`: Reconstruction basis type, either `"fourier"` or `"bsplines"`
-- `rec_basis_number`: Number of basis functions used for data reconstruction
-- `M`: Number of functional principal components to retain
-- `L`: Number of lambda values to test
-- `K`: Number of folds in cross-validation optimisation
-- `thres_ctrl`: Threshold values to test
+For each combination of `p` and `n`, `modify_yaml_config.py` generates a dedicated `config_single_iter.yaml` from `config_template_supp_simulation.yaml`, one per iteration, saved to `Simulation_studies/Supplementary_simulations/simulation_settings/p{p}_n{n}_n{n}/seed_{iteration}/`.
 
-### Step 1: Generate Configuration Files and Data
-
-The main launcher `Sbatch_simulations_luncher_tests.sh` iterates over all combinations of `p` and `n` defined at **lines 13–15**, and for each combination generates per-iteration config files using `modify_yaml_config.py`.
-
-The parameter grid is defined as:
-- `p_seq`: e.g. `(10 50)`
-- `n_g1_seq` / `n_g2_seq`: e.g. `(50 75 100 150 200 400 750 1000)` (equal group sizes)
-- `tot_iteration`: number of independent repetitions (default: 10)
-
-After config generation, data is simulated for all settings at once:
+### Stage 2 — Simulate Functional Data
 
 ```bash
-Rscript Data_simulator_full_data.R "$SAVE_PATH"
+Rscript Simulation_studies/Supplementary_simulations/Full_data_simulator_supp_simulation.R "$SAVE_PATH"
 ```
 
-This script loops over all simulation directories under `$SAVE_PATH` and generates the functional data for each iteration using the per-iteration config files.
+Generates functional datasets for all settings and iterations at once. Unlike the main simulations, data are generated under a model with **two covariates**: a categorical group factor and a continuous covariate (controlled by `model_continuous` and `var_cont_type` in the config). The original simulated data are saved to `Simulation_studies/Supplementary_simulations/simulation_settings/p{p}_n{n}_n{n}/seed_{iteration}/simulated_data` with plots of the simulated adjacency matrix and original data. The preprocessed simulated data are saved to `Simulation_studies/Supplementary_simulations/simulation_settings/p{p}_n{n}_n{n}/seed_{iteration}/`. 
 
-### Step 2: Run the Algorithm in Parallel
+### Stage 3 — Run condFGM in Parallel
 
-For each per-iteration config file, the launcher submits node-level parallel SLURM jobs:
+For each per-iteration config, submits one SLURM job per node using the shared launcher:
 
 ```bash
-bash Sbatch_parallel_luncher_tests.sh "$yaml_iter_file_path"
+bash Simulation_studies/Sbatch_parallel_luncher_simulations.sh "$yaml_iter_file_path"
 ```
 
-This dispatches one SLURM job per node (up to `p` jobs) via `Sbatch_parallel_tests.sbatch`, each running `Step3_node_parallel.R` for a specific node index. A job limit (`JOBS_LIMIT=70`) is respected to avoid overloading the scheduler.
+Each job runs `Simulation_studies/Script_sbatch_parallel_simulations.R` for a specific node index; results are stored in `Simulation_studies/Supplementary_simulations/simulation_settings/p{p}_n{n}_n{n}/seed_{iteration}/results`. The launcher waits for all jobs to complete before moving to the next setting.
 
-### Step 3: Verify Job Completion and Check Results
+### Stage 4 — Evaluate Results
 
-The launcher waits for all submitted jobs to complete before evaluating results for each simulation setting:
+Once jobs complete for a given setting:
 
 ```bash
-Rscript Check_results_screening_procedure_tests.R "$yaml_iter_file_path"
+Rscript Simulation_studies/Supplementary_simulations/Results_evaluation_supp_simulation.R "$yaml_iter_file_path"
 ```
 
-This validates and collects the results across all iterations for the given setting.
+Per-setting summary CSVs are written to `Simulation_studies/Supplementary_simulations/simulation_settings/p{p}_n{n}_n{n}/`:
+- `Results_performance_metrics_results_supp_simulations.csv` — F1, TPR, FPR for condFGM
 
-### Step 4: Generate Figures
+Additional inspectable plots of estimated results are available in `Simulation_studies/Supplementary_simulations/simulation_settings/p{p}_n{n}_n{n}/seed_{iteration}/results`.
 
-After all simulations and results checks are complete:
+### Step 5 — Generate Figures
+
+After all settings are evaluated:
 
 ```bash
-Rscript Plot_simulations_results.R
+Rscript Simulation_studies/Supplementary_simulations/Plot_simulations_results_supp.R
 ```
 
-This script generates all figures for the supplementary material.
+Generates Figures 9, 10, and 12 of the manuscript (Appendix B.1.2 and B.1.3), saved to `Simulation_studies/Supplementary_simulations/figures/`. Figure 10 requires the seed_3 results for setting `p10_n1000_n1000` to be present (produced by Stage 4 above, or downloaded from https://osf.io/ta3bq/overview).
 
-## Scenario Configuration
+---
 
-### Model Types
-The simulation scenarios are defined by specifying models for the two groups (`model_g1`, `model_g2`) and for the continuous covariate component (`model_continuous`) in `config_template.yaml`. Available options are detailed in the README file located in the `Functions/` folder.
+## Configuration Parameters
 
-### Varying Parameters
-The launcher systematically varies `p` and `n` while keeping `n_g1 = n_g2` and deriving `red_number = floor(p/3)`. To change the parameter grid, modify **lines 13–15** of `Sbatch_simulations_luncher_tests.sh`.
+Per-iteration config files are generated automatically from `config_template_supp_simulation.yaml` by `modify_yaml_config.py`. The table below lists parameters that are **externally set** by the launcher (do not edit these in the template) and those that can be **freely changed**.
 
-## Output Structure
+| Parameter | Set by | Description |
+|---|---|---|
+| `save_path` | Launcher | Base path for results; actual output goes to `save_path/simulation_name/` |
+| `simulation_name` | Launcher | Auto-set to `p{p}_n{n_g1}_n{n_g2}` |
+| `iteration` | Launcher | Iteration index; sets random seeds for reproducibility |
+| `tot_iteration` | Launcher | Total number of iterations; controls result collection |
+| `p` | Launcher | Number of nodes in the multivariate functional process |
+| `n_g1`, `n_g2` | Launcher | Sample sizes for groups 1 and 2 |
+| `red_number` | Launcher | Number of nodes with group-specific connectivity (`floor(p/3)`) |
+| `model_g1`, `model_g2` | **User** | Covariance model for the categorical group factor (see `Helper_functions/Sim.prec.matrix.func.R`) |
+| `model_continuous` | **User** | Covariance model for the continuous covariate component |
+| `var_cont_type` | **User** | Variance type for the continuous component: `"pos_cont"` or `"cont"` |
+| `rec_basis_type` | **User** | Basis type for data reconstruction: `"fourier"` or `"bsplines"` |
+| `rec_basis_number` | **User** | Number of basis functions for smoothing (default: 15) |
+| `n_basis_for_dim_reduction` | **User** | fPCA components retained per node (default: 5) |
+| `L` | **User** | Number of lambda values to evaluate (default: 100) |
+| `K` | **User** | Number of cross-validation folds (default: 5) |
+| `thres_ctrl` | **User** | Threshold grid for edge inclusion |
+| `seed_g1`, `seed_g2` | **User** | Random seeds for data generation |
 
-Results are saved under the directory specified by `save_path`, organised by simulation setting and iteration:
-
-```
-results/
-└── p{p}_n{n_g1}_n{n_g2}/
-    └── seed_{iteration}/
-        ├── config_single_iter.yaml
-        └── results/
-            ├── logs/
-            │   └── Node_{i}.log
-            └── test_results_metrics_{name_output}.csv
-```
-
-## Functions Folder
-
-The `Functions/` folder contains utility functions for:
-- Adjacency matrix simulation (`Sim.prec.matrix.func.R`)
-- Basis function computation (`bases.func.R`)
-- FPCA score computation (`FPCA.score.R`)
-- Precision matrix reconstruction (`prec.rec.R`)
+---
 
 ## Citation
 
 If you use this simulation pipeline in your research, please cite our paper:
 
+> Mapelli, A., Carini, L., Ieva, F., & Sommariva, S. (2026).
+> A neighbour selection approach for identifying differential networks in conditional functional graphical models.
+> arXiv:2601.02292. https://arxiv.org/abs/2601.02292
+
 ---
 
-**Note**: This pipeline is designed for high-performance computing environments with SLURM job scheduling. The `Sbatch_parallel_tests.sbatch` file uses the `cpuq` partition and Singularity-based R execution. Modifications may be needed for other computing environments.
+**Note**: This pipeline is designed for high-performance computing environments with SLURM job scheduling. Modifications may be needed for other computing environments.
+
+For the full R and Python session information used to produce the results in the paper, see [`session_info.txt`](../../session_info.txt) in the repository root.
