@@ -156,7 +156,7 @@ plot_obj <- ggplot(
     color = "Network",
     linetype = "Symmetrization"
   ) +
-  coord_cartesian(ylim = c(0, 1)) +
+  #coord_cartesian(ylim = c(0, 1)) +
   theme_minimal(base_size = 14) +
   theme(
     legend.position = "right",
@@ -338,7 +338,7 @@ plot_obj <- ggplot(
   labs(
     title = NULL,  
     x = "Network size",
-    y = "Computational time proportional to p=10",
+    y = "Computational time\n(relative to p = 10)",
     color = "Method"
   ) +
   theme_minimal(base_size = 14)  +
@@ -351,7 +351,7 @@ plot_obj <- ggplot(
   )
 
 ggsave(file.path(figures.dir, "Figure_5_computational_time.png"),
-       plot_obj, width = 10, height = 6, dpi = 300)
+       plot_obj, width = 10, height = 5, dpi = 300)
 
 
 

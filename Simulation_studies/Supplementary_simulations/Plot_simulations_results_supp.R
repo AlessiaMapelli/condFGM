@@ -158,13 +158,13 @@ plot_obj <- ggplot(
   scale_linetype_manual(values = method_lt, drop = FALSE) +
   labs(
     x = "Sample size for group",
-    y = "F1 score",
+    y = "False Positive Rate",
     color = "Network",
     linetype = "Symmetrization"
   ) +
-  coord_cartesian(ylim = c(0, 1)) +
+  #coord_cartesian(ylim = c(0, 1)) +
   scale_x_continuous(
-    breaks = c(50, 100, 200, 400, 750, 1000)
+    breaks = c(100, 200, 400, 750, 1000)
   ) + 
   theme_minimal(base_size = 14) +
   theme(
@@ -180,7 +180,7 @@ plot_obj <- ggplot(
   )
 
 ggsave(file.path(figures.dir, "Figure_12_FPR_performance_supplementary.png"),
-       plot_obj, width=15, height=6, dpi=300)
+       plot_obj, width=10, height=5, dpi=300)
 
 # Figure 10 — Estimated adjacency structure for one simulation replicate (p=10, n=1000, seed 3)
 seed3_dir <- file.path(

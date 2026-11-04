@@ -14,7 +14,7 @@ EEG_data_application/EEG_application_input_data.RData
 # Results
 EEG_data_application/results/
 EEG_data_application/figures/
-
+Computation_templates/results/
 
 # Simulation settings
 Simulation_studies/Step1/simulation_settings/
