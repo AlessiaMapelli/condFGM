@@ -51,7 +51,7 @@ for(i in 1:n_groups){
   G.cov.simm <- matrix(0, nrow = num_nodes, ncol = num_nodes)
   if(type=="AND"){
     for(j in 1:(num_nodes-1)){
-      for(k in (i+1):num_nodes){
+      for(k in (j+1):num_nodes){
         if(G.cov[j,k] == 1 & G.cov[k,j] == 1){
           G.cov.simm[j,k] = 1
           G.cov.simm[k,j] = 1
@@ -60,7 +60,7 @@ for(i in 1:n_groups){
     }
   }else if(type=="OR"){
     for(j in 1:(num_nodes-1)){
-      for(k in (i+1):num_nodes){
+      for(k in (j+1):num_nodes){
         if(G.cov[j,k] == 1 | G.cov[k,j] == 1){
           G.cov.simm[j,k] = 1
           G.cov.simm[k,j] = 1
