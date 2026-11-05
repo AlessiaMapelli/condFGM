@@ -203,6 +203,21 @@ ADMM.grplasso.two.groups <- function(A.X, A.Y, d, lambda,
 # @param pre_screen_threshold Threshold for pre-screening; auto-computed if NULL
 # @param screening_matrix Pre-computed node correlation matrix; required if pre_screen=TRUE
 # @param verbose Logical; print progress messages
+# @param scv_penalty SCV criterion on each test fold.
+#   "none" (default, as used for the published results): RSS = ||residual||_F^2.
+#   "bic": profiled-variance Gaussian BIC,
+#          n_test * sum_m log(RSS_m / n_test) + log(n_test) * |N_hat|,
+#          with RSS_m the residual sum of squares of score coordinate m and
+#          |N_hat| the number of selected blocks (scale invariant).
+# @param cv_folds How the K folds are formed.
+#   "contiguous" (default, as published): consecutive blocks of rows.
+#   "random": rows are randomly permuted (seeded per node/iteration) and then
+#             split into K blocks of (almost) equal size.
+# @param refit_ridge Ridge term kappa * I of the selective refit.
+#   "fixed" (default, as published): kappa = refit_ridge_const (default 0.1).
+#   "relative": kappa = refit_ridge_const * mean(diag(X'X)) on the training
+#               fold (default refit_ridge_const = 1e-3), i.e. scale invariant.
+# @param refit_ridge_const Constant used by refit_ridge; NULL uses the default.
 # @return Invisibly returns list(N.hat.optimal, P.frob, P.values, threshold)
 run_node_computation <- function(
   j,
@@ -222,8 +237,18 @@ run_node_computation <- function(
   pre_screen           = FALSE,
   pre_screen_threshold = NULL,
   screening_matrix     = NULL,
-  verbose              = TRUE
+  verbose              = TRUE,
+  scv_penalty          = c("none", "bic"),
+  cv_folds             = c("contiguous", "random"),
+  refit_ridge          = c("fixed", "relative"),
+  refit_ridge_const    = NULL
 ) {
+  scv_penalty <- match.arg(scv_penalty)
+  cv_folds    <- match.arg(cv_folds)
+  refit_ridge <- match.arg(refit_ridge)
+  if (is.null(refit_ridge_const)) {
+    refit_ridge_const <- if (refit_ridge == "fixed") 0.1 else 1e-3
+  }
   len.t <- length(thres.ctrl)
   n     <- nrow(scores_df)
   M     <- n_basis
@@ -306,6 +331,15 @@ run_node_computation <- function(
   }
   L_random <- length(random.sel.lambdas)
 
+  # Fold indexes (fixed across the lambda/threshold grid of this node)
+  row.order <- seq_len(n)
+  if (cv_folds == "random") {
+    set.seed(345 * seed_base + 10 * j)
+    row.order <- sample.int(n)
+  }
+  fold.ind <- lapply(1:K, function(k)
+    row.order[seq(floor((k - 1) * n / K) + 1, floor(k * n / K))])
+
   for (l in 1:L_random) {
     lambda <- random.sel.lambdas[l]
     if (l %% 10 == 0) cat(paste0("Lambda ", l, " of node ", j, "\n"))
@@ -363,28 +397,35 @@ run_node_computation <- function(
 
       SCV.single <- rep(NA, K)
       for (k in 1:K) {
-        fold.k.ind  <- seq(floor((k - 1) * n / K) + 1, floor(k * n / K))
+        fold.k.ind  <- fold.ind[[k]]
         fold.k.size <- length(fold.k.ind)
-        A.Y.cv    <- A.Y[fold.k.ind, ]
-        A.Y.train <- A.Y[-fold.k.ind, ]
+        A.Y.cv    <- A.Y[fold.k.ind, , drop = FALSE]
+        A.Y.train <- A.Y[-fold.k.ind, , drop = FALSE]
 
         if (card.N.hat.jlt > 0) {
-          A.X.cv    <- A.X.eff[fold.k.ind, ]
-          A.X.train <- A.X.eff[-fold.k.ind, ]
-          B.tilde   <- solve(t(A.X.train) %*% A.X.train +
-                             0.1 * diag(card.N.hat.jlt * M)) %*%
+          A.X.cv    <- A.X.eff[fold.k.ind, , drop = FALSE]
+          A.X.train <- A.X.eff[-fold.k.ind, , drop = FALSE]
+          XtX       <- t(A.X.train) %*% A.X.train
+          kappa     <- if (refit_ridge == "fixed") refit_ridge_const else
+                         refit_ridge_const * mean(diag(XtX))
+          B.tilde   <- solve(XtX + kappa * diag(card.N.hat.jlt * M)) %*%
                        t(A.X.train) %*% A.Y.train
           residual  <- A.Y.cv - A.X.cv %*% B.tilde
         } else {
           residual  <- A.Y.cv
         }
-        SCV.single[k] <- norm(residual, "F")^2
+        if (scv_penalty == "bic") {
+          SCV.single[k] <- fold.k.size * sum(log(colSums(residual^2) / fold.k.size)) +
+                           log(fold.k.size) * card.N.hat.jlt
+        } else {
+          SCV.single[k] <- norm(residual, "F")^2
+        }
       }
       SCV.mat[l, ind.t] <- mean(SCV.single)
     }
   }
 
-  scv.min        <- which(SCV.mat == min(SCV.mat), arr.ind = TRUE)
+  scv.min        <- which(SCV.mat == min(SCV.mat, na.rm = TRUE), arr.ind = TRUE)
   index.optimal  <- scv.min[nrow(scv.min), ]
   l.optimal      <- index.optimal[1]
   ind.t.optimal  <- index.optimal[2]

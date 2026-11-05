@@ -28,6 +28,11 @@ tol.rel              <- 0.0001
 verbose              <- config$verbose
 p.rand.lam           <- config$p_rand_lam
 p.rand.thr           <- config$p_rand_thr
+# SCV options (defaults reproduce the published results; see algorithm_functions.R)
+scv_penalty          <- if (is.null(config$scv_penalty)) "none" else config$scv_penalty
+cv_folds             <- if (is.null(config$cv_folds)) "contiguous" else config$cv_folds
+refit_ridge          <- if (is.null(config$refit_ridge)) "fixed" else config$refit_ridge
+refit_ridge_const    <- config$refit_ridge_const
 pre_screen           <- FALSE
 pre_screen_threshold <- NULL
 distance_path        <- NULL
@@ -64,7 +69,9 @@ run_node_computation(
   iteration = iteration,
   output_path = output_path, name_output = name_output,
   pre_screen = pre_screen, pre_screen_threshold = pre_screen_threshold,
-  screening_matrix = screening_matrix, verbose = verbose
+  screening_matrix = screening_matrix, verbose = verbose,
+  scv_penalty = scv_penalty, cv_folds = cv_folds,
+  refit_ridge = refit_ridge, refit_ridge_const = refit_ridge_const
 )
 
 cat("\nComputational time:", as.numeric(difftime(Sys.time(), time.start, units = "secs")), "seconds\n")
