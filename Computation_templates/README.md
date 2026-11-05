@@ -8,10 +8,10 @@ This pipeline performs neighbourhood selection for functional graphical model es
 
 ## Key Features
 
-- **Sparse Association Estimation**: Applies Sparse Group LASSO regularisation to identify meaningful function-to-function associations
+- **Sparse Association Estimation**: Applies group lasso regularisation to identify meaningful function-to-function associations
 - **Covariate Support**: Incorporates subject-level covariates into the model (e.g., age or clinical status in brain connectivity analyses); if no covariates are provided, estimates a single population-level network
 - **Scalable Processing**: Supports both sequential execution (single machine) and parallel execution (HPC with SLURM)
-- **Cross-Validation**: Automated hyperparameter tuning via K-fold cross-validation
+- **Selective Cross-Validation**: Automated node-wise tuning of the penalty and threshold via K-fold selective cross-validation (SCV)
 - **Visualization**: Generates publication-ready adjacency matrix plots
 - **Flexible Configuration**: YAML-based configuration for reproducible parameter management
 
@@ -23,7 +23,7 @@ This pipeline performs neighbourhood selection for functional graphical model es
 Computation_templates/
 ├── config_template.yaml          # Annotated configuration template with all available parameters
 ├── config_example.yaml           # Ready-to-run configuration for the provided example data
-├── algorithm_functions.R         # ADMM solver and Sparse Group LASSO core functions (shared library)
+├── algorithm_functions.R         # ADMM solver and group lasso core functions (shared library)
 ├── Data_preprocessing.R          # Extracts functional principal component scores from raw functional data
 ├── Script_sequential.R           # Single-threaded neighbourhood selection for all nodes
 ├── Script_sbatch_parallel.R      # Single-node neighbourhood selection for parallel HPC execution
@@ -154,8 +154,14 @@ All parameters are set in the YAML configuration file. See `config_template.yaml
 | `thres_ctrl` | Grid of threshold values for edge inclusion (e.g. `[0, 0.2, 0.4, 0.8, 1.2, 1.6, 2.0]`) |
 | `p_rand_lam` | Proportion of the lambda grid sampled at random instead of exhaustively (e.g. `0.5` = test 50% of lambda values); set to `1` for a full grid search |
 | `p_rand_thr` | Same as above but for the threshold grid; set to `1` to test all thresholds |
+| `scv_penalty` | SCV criterion on each test fold: `bic` (profiled-variance Gaussian BIC, $n_{test}\sum_m \log(RSS_m/n_{test}) + \log(n_{test})\,\vert\hat N\vert$, invariant to the scale of the scores) or `none` (residual sum of squares only). Default if omitted: `none` |
+| `cv_folds` | Fold construction: `random` (rows randomly permuted, seeded per node, then split into K equal blocks) or `contiguous` (consecutive blocks of rows; unsuitable when rows are sorted, e.g. by group). Default if omitted: `contiguous` |
+| `refit_ridge` | Ridge term $\kappa I$ of the selective refit: `relative` ($\kappa$ = `refit_ridge_const` × mean diagonal of $X^\top X$ on the training fold) or `fixed` ($\kappa$ = `refit_ridge_const`). Default if omitted: `fixed` |
+| `refit_ridge_const` | Optional constant for `refit_ridge`; defaults to `0.001` (`relative`) or `0.1` (`fixed`) |
 | `type` | Edge symmetrisation method: `OR` (edge present if detected in *either* direction) or `AND` (edge present only if detected in *both* directions) |
 | `verbose` | `TRUE` to print progress messages; `FALSE` for silent execution |
+
+> **SCV defaults**: when `scv_penalty`, `cv_folds` and `refit_ridge` are omitted, the pipeline uses `none` / `contiguous` / `fixed`, which reproduces the results published in the paper. The provided `config_example.yaml` and `config_template.yaml` use the recommended `bic` / `random` / `relative`.
 
 ---
 
@@ -173,8 +179,9 @@ Written to `output_path` for each node `j`:
 - `{name_output}_Adj_estimation.rda` — complete estimated adjacency matrices (see below)
 - `{name_output}_Adjacency_matrix_node_{covariate}.png` — binary adjacency matrix plot per covariate level
 - `{name_output}_Adjacency_matrix_node_diff_weights_{covariate}.png` — weighted differential matrix plot per covariate level (if covariates are present)
+- `{name_output}_Adjacency_matrix_node_group_{covariate}.png` — group-specific binary adjacency matrix (factor covariates only)
 
-The saved `.rda` file contains four objects:
+The saved `.rda` file contains the following objects:
 
 | Object | Description |
 |---|---|
@@ -182,6 +189,8 @@ The saved `.rda` file contains four objects:
 | `G.our.symm.weighted` | Named list of symmetrised weighted differential matrices for each covariate level |
 | `G.our.weighted` | Named list of asymmetric weighted differential matrices for each covariate level |
 | `G.our.symm.warning` | Named list of matrices flagging edges (value = 1) where the two directions gave inconsistent differential signals |
+| `G.our.symm.not.in.baseline` / `G.our.not.in.baseline` | Named lists of logical matrices (symmetrised / asymmetric) flagging differential edges that are *not in the baseline*, i.e. no direction has a selected population block, so the variation rate is not defined |
+| `G.our.group.symm` / `G.our.group` | Named lists, one per factor dummy (e.g. `group2`), of the symmetrised / asymmetric group-specific networks: the population edges, updated where a differential edge is selected to $\Vert\hat B^0_k + \hat B^c_k\Vert_F > \varepsilon$ |
 
 ---
 
@@ -203,7 +212,10 @@ The weighted differential matrices quantify the *direction and magnitude* of eac
 
 - **Values > 1** (red in the plot): the connection is *strengthened* in this covariate group relative to the baseline
 - **Values < 1** (blue in the plot): the connection is *weakened* relative to the baseline
-- **`NA`**: no differential edge detected for this pair
+- **Not in baseline** (orange in the plot; `NA` in the weighted matrix, `TRUE` in `G.our.symm.not.in.baseline`): a differential edge is detected but the population edge is not selected, so the connection is absent in the reference group (or, for a numeric covariate, at its mean) and induced by the covariate
+- **`NA`** elsewhere: no differential edge detected for this pair
+
+The symmetric weight of an edge is the geometric mean of the directional variation rates over the directions in which both the differential and the population block are selected.
 
 ---
 

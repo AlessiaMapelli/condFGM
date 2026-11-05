@@ -12,7 +12,7 @@ The repository contains reusable computational templates for applying condFGM to
 
 ## Overview
 
-condFGM is a method for estimating sparse conditional functional graphical models in the presence of subject-level covariates (categorical or continuous). It applies a neighbourhood selection approach with Sparse Group LASSO regularisation and ADMM optimisation to identify pairwise functional associations and their differential structure across covariate groups.
+condFGM is a method for estimating sparse conditional functional graphical models in the presence of subject-level covariates (categorical or continuous). It applies a neighbourhood selection approach with group lasso regularisation and ADMM optimisation to identify pairwise functional associations and their differential structure across covariate groups.
 
 The repository is organised into three main components, each with its own detailed README:
 
