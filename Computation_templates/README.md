@@ -42,7 +42,7 @@ Computation_templates/
 - R packages (must be installed manually):
   - **Preprocessing**: `yaml`, `fda`, `matrixcalc`, `MASS`, `mvtnorm`, `abind`, `ggplot2`, `reshape2`, `pheatmap`
   - **Estimation**: `yaml`
-  - **Results**: `yaml`, `reshape2`, `ggplot2`, `dplyr`, `stringr`
+  - **Results**: `yaml`, `reshape2`, `ggplot2`, `dplyr`, `stringr`, `ggnewscale` (optional: second colour scale for not-in-baseline edges; without it they are drawn in a single colour)
 - SLURM workload manager (for parallel processing only)
 
 > **Important**: all scripts must be run from the **repository root** (the folder containing `Computation_templates/`), not from inside `Computation_templates/` itself.
@@ -189,7 +189,7 @@ The saved `.rda` file contains the following objects:
 | `G.our.symm.weighted` | Named list of symmetrised weighted differential matrices for each covariate level |
 | `G.our.weighted` | Named list of asymmetric weighted differential matrices for each covariate level |
 | `G.our.symm.warning` | Named list of matrices flagging edges (value = 1) where the two directions gave inconsistent differential signals |
-| `G.our.symm.not.in.baseline` / `G.our.not.in.baseline` | Named lists of logical matrices (symmetrised / asymmetric) flagging differential edges that are *not in the baseline*, i.e. no direction has a selected population block, so the variation rate is not defined |
+| `G.our.symm.not.in.baseline` / `G.our.not.in.baseline` | Named lists of matrices (symmetrised / asymmetric) for differential edges that are *not in the baseline* (the population block is not selected, so the variation rate is not defined): value = $\Vert\hat B^c_k\Vert_F$ (geometric mean over directions in the symmetrised matrix), `NA` elsewhere |
 | `G.our.group.symm` / `G.our.group` | Named lists, one per factor dummy (e.g. `group2`), of the symmetrised / asymmetric group-specific networks: the population edges, updated where a differential edge is selected to $\Vert\hat B^0_k + \hat B^c_k\Vert_F > \varepsilon$ |
 
 ---
@@ -212,7 +212,7 @@ The weighted differential matrices quantify the *direction and magnitude* of eac
 
 - **Values > 1** (red in the plot): the connection is *strengthened* in this covariate group relative to the baseline
 - **Values < 1** (blue in the plot): the connection is *weakened* relative to the baseline
-- **Not in baseline** (orange in the plot; `NA` in the weighted matrix, `TRUE` in `G.our.symm.not.in.baseline`): a differential edge is detected but the population edge is not selected, so the connection is absent in the reference group (or, for a numeric covariate, at its mean) and induced by the covariate
+- **Not in baseline** (white-to-dark-green scale in the plot; `NA` in the weighted matrix, value in `G.our.symm.not.in.baseline`): a differential edge is detected but the population edge is not selected, so the connection is absent in the reference group (or, for a numeric covariate, at its mean) and induced by the covariate; the colour shows its magnitude $\Vert\hat B^c_k\Vert_F$
 - **`NA`** elsewhere: no differential edge detected for this pair
 
 The symmetric weight of an edge is the geometric mean of the directional variation rates over the directions in which both the differential and the population block are selected.

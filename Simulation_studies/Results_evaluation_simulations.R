@@ -89,10 +89,10 @@ for(iteration in 1:tot_iteration){
                                              n_g1, n_g2))
   
   ######### Differential network - weights   #########
-  # VR (Eq. 5.16) only where the baseline block is selected; otherwise the
-  # edge is marked "not in baseline" (see Computation_templates/network_functions.R)
+  # VR (Eq. 5.16) where the baseline block is selected; otherwise the edge is
+  # "not in baseline" with magnitude ||Bc||_F (see Computation_templates/network_functions.R)
   G.our.diff.weighted <- matrix(NA, nrow = num_nodes, ncol = num_nodes)
-  G.our.diff.not.in.baseline <- matrix(FALSE, nrow = num_nodes, ncol = num_nodes)
+  G.our.diff.not.in.baseline <- matrix(NA, nrow = num_nodes, ncol = num_nodes)
   G.our.group <- G.our.pop
   for(j in 1: num_nodes){
     for(k in 1: num_nodes){
@@ -101,7 +101,7 @@ for(iteration in 1:tot_iteration){
         d <- directional_vr(P.values, P.frob, k, num_nodes, 2, threshold)
         G.our.group[j,k] <- ifelse(d$group_norm > threshold,1,0)
         G.our.diff.weighted[j,k] <- d$vr
-        G.our.diff.not.in.baseline[j,k] <- !d$baseline_selected
+        G.our.diff.not.in.baseline[j,k] <- d$nib
       }
     }
   }

@@ -113,10 +113,11 @@ for(i in 1:n_groups){
               paste0(output_path, name_output, "_Adjacency_matrix_node_", cov_names[i], ".png"))
 
   if(i !=1){
-    # Directional VR (Eq. 5.16): defined only where the baseline block is
-    # selected (||B0_k||_F > threshold); otherwise the edge is "not in baseline".
+    # Directional VR (Eq. 5.16): VR where the baseline block is selected
+    # (||B0_k||_F > threshold); otherwise the edge is "not in baseline" and its
+    # magnitude is ||Bc_k||_F.
     G.cov.weighted <- matrix(NA, nrow = num_nodes, ncol = num_nodes)
-    G.cov.nib      <- matrix(FALSE, nrow = num_nodes, ncol = num_nodes)
+    G.cov.nib      <- matrix(NA, nrow = num_nodes, ncol = num_nodes)
     G.cov.group    <- G.pop
     for(j in 1: num_nodes){
       load(paste(output_path, name_output,"_" ,j, "coeff.rda", sep=""))
@@ -124,7 +125,7 @@ for(i in 1:n_groups){
         if(G.cov[j,k]){
           d <- directional_vr(P.values, P.frob, k, num_nodes, i, threshold)
           G.cov.weighted[j,k] <- d$vr
-          G.cov.nib[j,k]      <- !d$baseline_selected
+          G.cov.nib[j,k]      <- d$nib
           # Group network, as in the simulation code: where the differential
           # block is selected, the edge is present in the group if ||B0+Bc|| > threshold
           G.cov.group[j,k]    <- ifelse(d$group_norm > threshold, 1, 0)
@@ -132,39 +133,17 @@ for(i in 1:n_groups){
       }
     }
 
-    # Symmetric VR (Eq. 5.17): geometric mean of the directional VRs over the
-    # directions where both the differential and the baseline block are
-    # selected; "not in baseline" if there is no such direction.
-    G.cov.simm.weighted <- matrix(NA, nrow = num_nodes, ncol = num_nodes)
-    G.cov.simm.warning  <- matrix(NA, nrow = num_nodes, ncol = num_nodes)
-    G.cov.simm.nib      <- matrix(FALSE, nrow = num_nodes, ncol = num_nodes)
-    for (j in 1:(num_nodes - 1)) {
-      for (k in (j + 1):num_nodes) {
-        if(G.cov.simm[j,k]){
-          x <- c(G.cov.weighted[j,k], G.cov.weighted[k,j])
-          x <- x[!is.na(x)]
-          if (length(x) == 0) {
-            G.cov.simm.nib[j,k] <- G.cov.simm.nib[k,j] <- TRUE
-            G.cov.simm.warning[j,k] <- G.cov.simm.warning[k,j] <- 0
-          } else {
-            w <- exp(mean(log(x)))
-            G.cov.simm.weighted[j,k] <- G.cov.simm.weighted[k,j] <- w
-            # Warning: the two directions disagree on the sign of the change
-            disagree <- length(x) == 2 && !((x[1] > 1 & x[2] > 1) | (x[1] < 1 & x[2] < 1))
-            G.cov.simm.warning[j,k] <- G.cov.simm.warning[k,j] <- as.numeric(disagree)
-          }
-        }
-      }
-    }
+    # Symmetric weights (Eq. 5.17), see symmetric_weights()
+    sw <- symmetric_weights(G.cov.weighted, G.cov.nib, G.cov.simm)
 
-    G.our.symm.weighted[[cov_names[i]]] <- G.cov.simm.weighted
-    G.our.symm.warning[[cov_names[i]]] <- G.cov.simm.warning
-    G.our.symm.not.in.baseline[[cov_names[i]]] <- G.cov.simm.nib
+    G.our.symm.weighted[[cov_names[i]]] <- sw$vr
+    G.our.symm.warning[[cov_names[i]]] <- sw$warning
+    G.our.symm.not.in.baseline[[cov_names[i]]] <- sw$nib
     G.our.weighted[[cov_names[i]]] <- G.cov.weighted
     G.our.not.in.baseline[[cov_names[i]]] <- G.cov.nib
 
     plot_vr_matrix(
-      G.cov.simm.weighted, G.cov.simm.nib,
+      sw$vr, sw$nib,
       title = paste0("Direction of changes in the estimated adjacency matrix - ", cov_names[i]),
       filename = paste0(output_path, name_output,
                         "_Adjacency_matrix_node_diff_weights_", cov_names[i], ".png")
