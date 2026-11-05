@@ -20,7 +20,7 @@ thres_ctrl: [0, 0.2, 0.4, 0.8, 1.2, 1.6, 2.0]
 p_rand_lam: 0.5
 p_rand_thr: 1
 
-# === SCV options (Appendix D.3) ===
+# === SCV options ===
 scv_penalty: bic
 cv_folds: random
 refit_ridge: relative
