@@ -30,3 +30,6 @@ Session_info.R
 
 # macOS
 .DS_Store
+
+# Private development notes
+DEV_decisions_log.md
