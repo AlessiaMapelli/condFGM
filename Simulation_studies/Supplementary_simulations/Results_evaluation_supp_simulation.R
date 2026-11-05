@@ -24,6 +24,7 @@ n_g2 <- config$n_g2
 func.path <- config$func_path
 source(file.path(func.path, "prec.rec.R"))
 source(file.path(func.path, "plot_binary_adj_matrix.R"))  
+source(file.path("Computation_templates", "network_functions.R"))
 
 ####################################
 #   RESULTS EVALUATION and PLOTS   #
@@ -86,74 +87,27 @@ for(iteration in 1:tot_iteration){
                                              n_g1, n_g2))
   
   ######### Differential network - group contribution - weights ######### 
-  G.our.diff.ratio.forb <- matrix(NA, nrow = num_nodes, ncol = num_nodes)
-  G.our.diff.sum.forb <- matrix(NA, nrow = num_nodes, ncol = num_nodes)
-  G.our.diff.sum.forb.logic <- matrix(NA, nrow = num_nodes, ncol = num_nodes)
+  # VR (Eq. 5.16) only where the baseline block is selected; otherwise the
+  # edge is marked "not in baseline" (see Computation_templates/network_functions.R)
   G.our.diff.ratio.forb.sum <- matrix(NA, nrow = num_nodes, ncol = num_nodes)
+  G.our.diff.not.in.baseline <- matrix(FALSE, nrow = num_nodes, ncol = num_nodes)
   G.our.group <- G.our.pop
   for(j in 1: num_nodes){
     for(k in 1: num_nodes){
       if(G.our.diff[j,k]){
         load(paste(output_path, name_output,"_" ,j, "coeff.rda", sep=""))
-        beta.g2.forbs <- norm(P.values[[k]] + P.values[[k+num_nodes]], "F")
-        G.our.group[j,k] <- ifelse(beta.g2.forbs > threshold,1,0)
-        if(P.frob[[k]] == 0){
-          cat("Warning: Zero norm at denominator. Setting to the numerator value")
-          G.our.diff.ratio.forb[j,k] <- (P.frob[[k+num_nodes]])
-          G.our.diff.ratio.forb.sum[j,k] <- beta.g2.forbs
-        }else{
-          G.our.diff.ratio.forb[j,k] <- (P.frob[[k+num_nodes]])/(P.frob[[k]])
-          G.our.diff.ratio.forb.sum[j,k] <- beta.g2.forbs/(P.frob[[k]])
-        }
-        G.our.diff.sum.forb[j,k] <- beta.g2.forbs
-        G.our.diff.sum.forb.logic[j,k] <- beta.g2.forbs>threshold
+        d <- directional_vr(P.values, P.frob, k, num_nodes, 2, threshold)
+        G.our.group[j,k] <- ifelse(d$group_norm > threshold,1,0)
+        G.our.diff.ratio.forb.sum[j,k] <- d$vr
+        G.our.diff.not.in.baseline[j,k] <- !d$baseline_selected
       }
     }
   }
 
-  adj_df <- melt(G.our.diff.ratio.forb.sum, varnames = c("Row","Col"), value.name = "Value")
-  
-  p <- ggplot(adj_df, aes(x = Col, y = Row, fill = Value)) +
-    geom_tile(color = "grey92", linewidth = 0.15) +
-    coord_fixed() +
-    scale_y_reverse() +
-    labs(
-      title = str_wrap(
-        "Direction of changes in the estimated differential adjacency matrix - categorical",
-        width = 42
-      ),
-      x = NULL,
-      y = NULL
-    ) +
-    theme_minimal(base_size = 13) +
-    theme(
-      axis.text = element_blank(),
-      axis.ticks = element_blank(),
-      panel.grid = element_blank(),
-      plot.title = element_text(
-        size = 20,
-        hjust = 0.5,
-        vjust = -1.5,
-        lineheight = 0.95 
-      ),
-      legend.title = element_text(size = 16, face = "bold"),
-      legend.text = element_text(size = 14),
-      legend.key.height = unit(1.2, "cm"),
-      legend.key.width = unit(0.35, "cm"),
-      plot.margin = margin(4, 4, 4, 4)
-    ) +
-    scale_fill_gradient2(
-      low = "darkblue",
-      mid = "white",
-      high = "darkred",
-      midpoint = 1,
-      na.value = "white",
-      name = "Value"
-    )
-  
-  ggsave(p,
-         filename = paste0(output_path, "Estimated_adjacency_matrix_node_diff_categorical_signed_weights.png"),
-         width = 8, height = 8, dpi = 300)
+  plot_vr_matrix(G.our.diff.ratio.forb.sum, G.our.diff.not.in.baseline,
+                 title = "Direction of changes in the estimated differential adjacency matrix - categorical",
+                 filename = paste0(output_path, "Estimated_adjacency_matrix_node_diff_categorical_signed_weights.png"),
+                 low = "darkblue", high = "darkred")
 
   ######### Group network ######### 
   
@@ -198,74 +152,29 @@ for(iteration in 1:tot_iteration){
                                              n_g1, n_g2))
   
   ######### Differential network - continuous contribution - weights ######### 
-  G.our.mod.ratio.forb <- matrix(NA, nrow = num_nodes, ncol = num_nodes)
-  G.our.mod.sum.forb <- matrix(NA, nrow = num_nodes, ncol = num_nodes)
-  G.our.mod.sum.forb.logic <- matrix(NA, nrow = num_nodes, ncol = num_nodes)
+  # VR (Eq. 5.16) only where the baseline block is selected; otherwise the
+  # edge is marked "not in baseline" (see Computation_templates/network_functions.R)
   G.our.mod.ratio.forb.sum <- matrix(NA, nrow = num_nodes, ncol = num_nodes)
+  G.our.mod.not.in.baseline <- matrix(FALSE, nrow = num_nodes, ncol = num_nodes)
   for(j in 1: num_nodes){
     for(k in 1: num_nodes){
       if(G.our.mod[j,k]){
         load(paste(output_path, name_output,"_" ,j, "coeff.rda", sep=""))
-        beta.g2.forbs <- norm(P.values[[k]] + P.values[[k+2*num_nodes]], "F")
-        if(P.frob[[k]] == 0){
-          cat("Warning: Zero norm at denominator. Setting to the numerator value")
-          G.our.mod.ratio.forb[j,k] <- (P.frob[[k+2*num_nodes]])
-          G.our.mod.ratio.forb.sum[j,k] <- beta.g2.forbs
-        }else{
-          G.our.mod.ratio.forb[j,k] <- (P.frob[[k+2*num_nodes]])/(P.frob[[k]])
-          G.our.mod.ratio.forb.sum[j,k] <- beta.g2.forbs/(P.frob[[k]])
-        }
-        G.our.mod.sum.forb[j,k] <- beta.g2.forbs
-        G.our.mod.sum.forb.logic[j,k] <- beta.g2.forbs>threshold
+        d <- directional_vr(P.values, P.frob, k, num_nodes, 3, threshold)
+        G.our.mod.ratio.forb.sum[j,k] <- d$vr
+        G.our.mod.not.in.baseline[j,k] <- !d$baseline_selected
       }
     }
   }
-  
-  adj_df <- melt(G.our.mod.ratio.forb.sum, varnames = c("Row","Col"), value.name = "Value")
-  
-  p <- ggplot(adj_df, aes(x = Col, y = Row, fill = Value)) +
-    geom_tile(color = "grey92", linewidth = 0.15) +
-    coord_fixed() +
-    scale_y_reverse() +
-    labs(
-      title = str_wrap(
-        "Direction of changes in the estimated differential adjacency matrix - continuous",
-        width = 42
-      ),
-      x = NULL,
-      y = NULL
-    ) +
-    theme_minimal(base_size = 13) +
-    theme(
-      axis.text = element_blank(),
-      axis.ticks = element_blank(),
-      panel.grid = element_blank(),
-      plot.title = element_text(
-        size = 20,
-        hjust = 0.5,
-        vjust = -1.5,
-        lineheight = 0.95 
-      ),
-      legend.title = element_text(size = 16, face = "bold"),
-      legend.text = element_text(size = 14),
-      legend.key.height = unit(1.2, "cm"),
-      legend.key.width = unit(0.35, "cm"),
-      plot.margin = margin(4, 4, 4, 4)
-    ) +
-    scale_fill_gradient2(
-      low = "#2166AC",
-      mid = "white",
-      high = "#B2182B",
-      midpoint = 1,
-      na.value = "white",
-      name = "Value"
-    )
-  ggsave(p,
-         filename = paste0(output_path, "Estimated_adjacency_matrix_node_diff_continuous_signed_weights.png"),
-         width = 8, height = 8, dpi = 300)
+
+  plot_vr_matrix(G.our.mod.ratio.forb.sum, G.our.mod.not.in.baseline,
+                 title = "Direction of changes in the estimated differential adjacency matrix - continuous",
+                 filename = paste0(output_path, "Estimated_adjacency_matrix_node_diff_continuous_signed_weights.png"),
+                 low = "#2166AC", high = "#B2182B")
   
   save(G.our.pop, G.our.diff, G.our.mod, G.our.mod.ratio.forb.sum,
        G.our.group, G.our.diff.ratio.forb.sum,
+       G.our.diff.not.in.baseline, G.our.mod.not.in.baseline,
        file = paste0(output_path, "Estimated_adjacency_matrices.RData"))
   
 }

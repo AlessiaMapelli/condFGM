@@ -23,6 +23,7 @@ n_g2 <- config$n_g2
 func.path <- config$func_path
 source(file.path(func.path, "prec.rec.R"))
 source(file.path(func.path, "plot_binary_adj_matrix.R"))  
+source(file.path("Computation_templates", "network_functions.R"))
 
 
 ####################################
@@ -88,65 +89,29 @@ for(iteration in 1:tot_iteration){
                                              n_g1, n_g2))
   
   ######### Differential network - weights   #########
+  # VR (Eq. 5.16) only where the baseline block is selected; otherwise the
+  # edge is marked "not in baseline" (see Computation_templates/network_functions.R)
   G.our.diff.weighted <- matrix(NA, nrow = num_nodes, ncol = num_nodes)
+  G.our.diff.not.in.baseline <- matrix(FALSE, nrow = num_nodes, ncol = num_nodes)
   G.our.group <- G.our.pop
   for(j in 1: num_nodes){
     for(k in 1: num_nodes){
       if(G.our.diff[j,k]){
         load(paste(output_path, name_output,"_" ,j, "coeff.rda", sep=""))
-        beta.g2.forbs <- norm(P.values[[k]] + P.values[[k+num_nodes]], "F")
-        G.our.group[j,k] <- ifelse(beta.g2.forbs > threshold,1,0)
-        if(P.frob[[k]] == 0){
-          cat("Warning: Zero norm at denominator. Setting to the numerator value")
-          G.our.diff.weighted[j,k] <- beta.g2.forbs
-        }else{
-          G.our.diff.weighted[j,k] <- beta.g2.forbs/(P.frob[[k]])
-        }
+        d <- directional_vr(P.values, P.frob, k, num_nodes, 2, threshold)
+        G.our.group[j,k] <- ifelse(d$group_norm > threshold,1,0)
+        G.our.diff.weighted[j,k] <- d$vr
+        G.our.diff.not.in.baseline[j,k] <- !d$baseline_selected
       }
     }
   }
-  
-  adj_df <- melt(G.our.diff.weighted, varnames = c("Row","Col"), value.name = "Value")
-  
-  p <- ggplot(adj_df, aes(x = Col, y = Row, fill = Value)) +
-    geom_tile(color = "grey92", linewidth = 0.15) +
-    coord_fixed() +
-    scale_y_reverse() +
-    labs(
-      title = str_wrap("Direction of changes in the estimated differential adjacency matrix", width = 42),
-      x = NULL,
-      y = NULL
-    ) +
-    theme_minimal(base_size = 13) +
-    theme(
-      axis.text = element_blank(),
-      axis.ticks = element_blank(),
-      panel.grid = element_blank(),
-      plot.title = element_text(
-        size = 20,
-        hjust = 0.5,
-        vjust = -1.5,
-        lineheight = 0.95 
-      ),
-      legend.title = element_text(size = 16, face = "bold"),
-      legend.text = element_text(size = 14),
-      legend.key.height = unit(1.2, "cm"),
-      legend.key.width = unit(0.35, "cm"),
-      plot.margin = margin(4, 4, 4, 4)
-    ) +
-    scale_fill_gradient2(
-      low = "darkblue",
-      mid = "white",
-      high = "darkred",
-      midpoint = 1,
-      na.value = "white",
-      name = "Value"
-    )
-  fname_w <- paste0(output_path,
-                    "Estimated_adjacency_matrix_node_diff_weights_non_symm.png")
-  ggsave(p, filename = fname_w, width = 8, height = 8, dpi = 300)
-  
-  
+
+  plot_vr_matrix(G.our.diff.weighted, G.our.diff.not.in.baseline,
+                 title = "Direction of changes in the estimated differential adjacency matrix",
+                 filename = paste0(output_path,
+                                   "Estimated_adjacency_matrix_node_diff_weights_non_symm.png"))
+
+
   ######### Group network   #########
   G.group <- (G.true.g2>0)
   diag(G.group) <- FALSE
